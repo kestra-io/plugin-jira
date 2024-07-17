@@ -1,0 +1,23 @@
+id: jira
+namespace: io.kestra.tests
+
+listeners:
+  - tasks:
+    - id: jira
+      type: io.kestra.plugin.jira.issues.Create
+      baseUrl: your-domain.atlassian.net
+      username: your_email@example.com
+      password: your_jira_api_token
+      projectKey: myproject
+      summary: "{{ execution.id }} has failed on {{ taskrun.startDate }}"
+      description: "See the link below for more details"
+      labels:
+        - bug
+        - workflow
+
+tasks:
+  - id: seq
+    type: io.kestra.core.tasks.flows.Sequential
+    tasks:
+      - id: failed
+        type: io.kestra.core.tasks.executions.Fail
