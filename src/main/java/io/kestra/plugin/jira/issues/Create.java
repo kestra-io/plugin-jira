@@ -45,11 +45,6 @@ import java.util.Map;
     }
 )
 public class Create extends JiraTemplate {
-    @Builder.Default
-    private final String executionId = "{{ execution.id }}";
-    private Map<String, Object> customFields;
-    private String customMessage;
-
     @Override
     public VoidOutput run(RunContext runContext) throws Exception {
         this.templateUri = "jira-template.peb";
