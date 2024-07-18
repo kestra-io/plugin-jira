@@ -1,0 +1,20 @@
+id: comment-jira
+namespace: io.kestra.tests
+
+listeners:
+  - tasks:
+    - id: jira
+      type: io.kestra.plugin.jira.issues.CreateComment
+      baseUrl: your-domain.atlassian.net
+      username: your_email@example.com
+      password: your_jira_api_token
+      projectKey: myproject
+      issueIdOrKey: issuekey
+      body: "{{ execution.id }} has failed on {{ taskrun.startDate }}"
+
+tasks:
+  - id: seq
+    type: io.kestra.core.tasks.flows.Sequential
+    tasks:
+      - id: failed
+        type: io.kestra.core.tasks.executions.Fail

@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import java.util.Map;
+import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
 
 @SuperBuilder
 @ToString
@@ -48,6 +48,7 @@ public class Create extends JiraTemplate {
     @Override
     public VoidOutput run(RunContext runContext) throws Exception {
         this.templateUri = "jira-template.peb";
+        this.baseUrl += ISSUE_API_ROUTE;
 
         return super.run(runContext);
     }
