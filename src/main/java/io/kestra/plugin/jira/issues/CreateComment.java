@@ -28,16 +28,16 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Comment on a jira ticket based on workflow execution status",
+    title = "Comment on a jira ticket based on workflow execution status.",
     description = ""
 )
 @Plugin(
     examples = {
         @Example(
-            title = "Comment on a jira ticket on a failed flow execution",
+            title = "Comment on a jira ticket on a failed flow execution.",
             full = true,
             code = """
-                id: myflow
+                id: jira_flow
                 namespace: company.myteam
 
                 tasks:
