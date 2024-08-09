@@ -16,20 +16,20 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Create a jira ticket based on workflow execution status",
+    title = "Create a jira ticket based on workflow execution status.",
     description = ""
 )
 @Plugin(
     examples = {
         @Example(
-            title = "Create a jira ticket on a failed flow execution",
+            title = "Create a jira ticket on a failed flow execution.",
             full = true,
             code = """
-                id: myflow
+                id: jira_flow
                 namespace: company.myteam
 
                 tasks:
-                  - id: hello
+                  - id: create_issue
                     type: io.kestra.plugin.jira.issues.Create
                     baseUrl: your-domain.atlassian.net
                     username: your_email@example.com
