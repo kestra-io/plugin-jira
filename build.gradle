@@ -48,18 +48,9 @@ dependencies {
     compileOnly "io.micronaut.reactor:micronaut-reactor"
     compileOnly "io.micronaut:micronaut-jackson-databind"
 
-    compileOnly group: 'com.fasterxml.jackson.module', name: 'jackson-module-parameter-names'
-    compileOnly group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-guava'
-    compileOnly group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310'
-
     // kestra
     annotationProcessor group: "io.kestra", name: "processor", version: kestraVersion
     compileOnly group: "io.kestra", name: "core", version: kestraVersion
-
-    // this will enforce Jackson to the version defined in the Platform
-    api group: 'com.fasterxml.jackson.core', name: 'jackson-core'
-    api group: 'com.fasterxml.jackson.core', name: 'jackson-databind'
-    api group: 'com.fasterxml.jackson.core', name: 'jackson-annotations'
 }
 
 
