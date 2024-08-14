@@ -7,7 +7,7 @@ listeners:
       type: io.kestra.plugin.jira.issues.Create
       baseUrl: your-domain.atlassian.net
       username: your_email@example.com
-      passwordOrToken: your_jira_api_token
+      password: your_jira_api_token
       projectKey: myproject
       summary: "{{ execution.id }} has failed on {{ taskrun.startDate }}"
       description: "See the link below for more details"

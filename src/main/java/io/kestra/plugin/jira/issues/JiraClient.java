@@ -45,7 +45,7 @@ public abstract class JiraClient extends Task implements RunnableTask<VoidOutput
         description = "(Required for basic & API token authorization)"
     )
     @PluginProperty(dynamic = true)
-    protected String passwordOrToken;
+    protected String password;
 
     @Schema(
         title = "Atlassian OAuth access token",
@@ -81,10 +81,10 @@ public abstract class JiraClient extends Task implements RunnableTask<VoidOutput
     ) throws IllegalVariableEvaluationException {
         MutableHttpRequest<String> request = HttpRequest.POST(baseUrl, payload);
 
-        if (this.username != null && passwordOrToken != null) {
+        if (this.username != null && password != null) {
             return request.basicAuth(
                 runContext.render(this.username),
-                runContext.render(this.passwordOrToken)
+                runContext.render(this.password)
             );
         }
 

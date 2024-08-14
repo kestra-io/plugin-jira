@@ -32,7 +32,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
                     type: io.kestra.plugin.jira.issues.Create
                     baseUrl: your-domain.atlassian.net
                     username: your_email@example.com
-                    passwordOrToken: "{{ secret('your_jira_api_token') }}"
+                    password: "{{ secret('your_jira_api_token') }}"
                     projectKey: myproject
                     summary: "Workflow failed"
                     description: "{{ execution.id }} has failed on {{ taskrun.startDate }} See the link below for more details"

@@ -44,7 +44,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
                     type: io.kestra.plugin.jira.issues.CreateComment
                     baseUrl: your-domain.atlassian.net
                     username: your_email@example.com
-                    passwordOrToken: "{{ secret('jira_api_token') }}"
+                    password: "{{ secret('jira_api_token') }}"
                     projectKey: project_key
                     issueIdOrKey: "TID-53"
                     body: "This ticket is not moving, do we need to outsource this!"

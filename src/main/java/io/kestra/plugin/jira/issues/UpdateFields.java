@@ -28,8 +28,8 @@ import java.util.Objects;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Update a Jira field",
-    description = "Updates a specific field in a Jira ticket."
+    title = "Updates Jira fields",
+    description = "Update specific fields in a Jira ticket."
 )
 @Plugin(
     examples = {
@@ -45,7 +45,7 @@ import java.util.Objects;
                     type: io.kestra.plugin.jira.issues.UpdateFields
                     baseUrl: your-domain.atlassian.net
                     username: your_email@example.com
-                    passwordOrToken: "{{ secret('your_jira_api_token') }}"
+                    password: "{{ secret('your_jira_api_token') }}"
                     issueIdOrKey: YOUR_ISSUE_KEY
                     fields:
                       description: "Updated description of: {{ execution.id }}"
