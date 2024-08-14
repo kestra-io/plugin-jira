@@ -42,7 +42,7 @@ import java.util.Objects;
 
                 tasks:
                   - id: update_ticket_field
-                    type: io.kestra.plugin.jira.issues.UpdateField
+                    type: io.kestra.plugin.jira.issues.UpdateFields
                     baseUrl: your-domain.atlassian.net
                     username: your_email@example.com
                     passwordOrToken: "{{ secret('your_jira_api_token') }}"
