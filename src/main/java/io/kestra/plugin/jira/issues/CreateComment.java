@@ -1,5 +1,6 @@
 package io.kestra.plugin.jira.issues;
 
+import com.google.common.base.Charsets;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -13,7 +14,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-import org.apache.commons.io.Charsets;
 import org.apache.commons.io.IOUtils;
 
 import java.util.Map;
@@ -28,8 +28,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Comment on a jira ticket based on workflow execution status.",
-    description = ""
+    title = "Comment on a jira ticket based on workflow execution status."
 )
 @Plugin(
     examples = {
@@ -45,7 +44,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
                     type: io.kestra.plugin.jira.issues.CreateComment
                     baseUrl: your-domain.atlassian.net
                     username: your_email@example.com
-                    password: "{{ secret('jira_api_token') }}"
+                    passwordOrToken: "{{ secret('jira_api_token') }}"
                     projectKey: project_key
                     issueIdOrKey: "TID-53"
                     body: "This ticket is not moving, do we need to outsource this!"

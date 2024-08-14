@@ -1,19 +1,18 @@
-id: jira
+id: update-fields-jira
 namespace: io.kestra.tests
 
 listeners:
   - tasks:
     - id: jira
-      type: io.kestra.plugin.jira.issues.Create
+      type: io.kestra.plugin.jira.issues.UpdateFields
       baseUrl: your-domain.atlassian.net
       username: your_email@example.com
       passwordOrToken: your_jira_api_token
       projectKey: myproject
-      summary: "{{ execution.id }} has failed on {{ taskrun.startDate }}"
-      description: "See the link below for more details"
-      labels:
-        - bug
-        - workflow
+      issueIdOrKey: issuekey
+      fields:
+        description: "Changed description"
+        summary: "Changed summary"
 
 tasks:
   - id: seq
