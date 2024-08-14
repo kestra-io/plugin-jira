@@ -47,8 +47,9 @@ import java.util.Objects;
                     username: your_email@example.com
                     passwordOrToken: "{{ secret('your_jira_api_token') }}"
                     issueIdOrKey: YOUR_ISSUE_KEY
-                    fieldName: customfield_10005
-                    fieldValue: "Updated value"
+                    fields:
+                      description: "Updated description of: {{ execution.id }}"
+                      customfield_10005: "Updated value"
               """
         )
     }
