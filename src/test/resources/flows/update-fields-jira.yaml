@@ -1,0 +1,22 @@
+id: update-fields-jira
+namespace: io.kestra.tests
+
+listeners:
+  - tasks:
+    - id: jira
+      type: io.kestra.plugin.jira.issues.UpdateFields
+      baseUrl: your-domain.atlassian.net
+      username: your_email@example.com
+      password: your_jira_api_token
+      projectKey: myproject
+      issueIdOrKey: issuekey
+      fields:
+        description: "Changed description"
+        summary: "Changed summary"
+
+tasks:
+  - id: seq
+    type: io.kestra.core.tasks.flows.Sequential
+    tasks:
+      - id: failed
+        type: io.kestra.core.tasks.executions.Fail

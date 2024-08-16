@@ -16,13 +16,12 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Create a jira ticket based on workflow execution status.",
-    description = ""
+    title = "Create a jira ticket based on workflow execution status."
 )
 @Plugin(
     examples = {
         @Example(
-            title = "Create a jira ticket on a failed flow execution.",
+            title = "Create a jira ticket on a failed flow execution using basic authentication.",
             full = true,
             code = """
                 id: jira_flow
@@ -34,6 +33,26 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
                     baseUrl: your-domain.atlassian.net
                     username: your_email@example.com
                     password: "{{ secret('your_jira_api_token') }}"
+                    projectKey: myproject
+                    summary: "Workflow failed"
+                    description: "{{ execution.id }} has failed on {{ taskrun.startDate }} See the link below for more details"
+                    labels:
+                      - bug
+                      - workflow
+                """
+        ),
+        @Example(
+            title = "Create a jira ticket on a failed flow execution using OAUTH2 access token authentication.",
+            full = true,
+            code = """
+                id: jira_flow
+                namespace: company.myteam
+
+                tasks:
+                  - id: create_issue
+                    type: io.kestra.plugin.jira.issues.Create
+                    baseUrl: your-domain.atlassian.net
+                    accessToken: "{{ secret('your_jira_access_token') }}"
                     projectKey: myproject
                     summary: "Workflow failed"
                     description: "{{ execution.id }} has failed on {{ taskrun.startDate }} See the link below for more details"
