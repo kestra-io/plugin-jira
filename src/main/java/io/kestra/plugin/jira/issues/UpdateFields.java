@@ -34,7 +34,7 @@ import java.util.Objects;
 @Plugin(
     examples = {
         @Example(
-            title = "Update a Jira ticket field",
+            title = "Update a Jira ticket fields",
             full = true,
             code = """
                 id: jira_update_field
