@@ -51,6 +51,13 @@ public abstract class JiraTemplate extends JiraClient {
     )
     @PluginProperty(dynamic = true)
     protected List<String> labels;
+
+    @Schema(
+        title = "Issue type of the Jira ticket"
+    )
+    @PluginProperty(dynamic = true)
+    protected String issuetype;
+
     @SuppressWarnings("unchecked")
     @Override
     public VoidOutput run(RunContext runContext) throws Exception {
@@ -58,28 +65,37 @@ public abstract class JiraTemplate extends JiraClient {
             return super.run(runContext);
         }
 
-        Map<String, Object> mainMap = new HashMap<>();
-        Map<String, Object> renderedAttributesMap = Map.of(
-            "projectKey", runContext.render(projectKey),
-            "summary", runContext.render(summary),
-            "labels", runContext.render(labels),
-            "description", runContext.render(description)
-        );
+            issuetype = runContext.render(issuetype) == null ? "Task" : runContext.render(issuetype);
 
-        if (this.templateUri != null) {
-            String template = IOUtils.toString(
-                Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(this.templateUri)),
-                Charsets.UTF_8
+            Map<String, Object> mainMap = new HashMap<>();
+            Map<String, Object> renderedAttributesMap = Map.of(
+                "projectKey", runContext.render(projectKey),
+                "summary", runContext.render(summary),
+                "labels", runContext.render(labels),
+                "description", runContext.render(description),
+                "issuetype", runContext.render(issuetype)
             );
 
-            String render = runContext.render(template, renderedAttributesMap);
+            Map<String, Object> fieldsMap = new HashMap<>();
+            fieldsMap.put("projectKey", renderedAttributesMap.get("projectKey"));
+            fieldsMap.put("summary", renderedAttributesMap.get("summary"));
+            fieldsMap.put("description", renderedAttributesMap.get("description"));
+            fieldsMap.put("labels", renderedAttributesMap.get("labels"));
 
-            mainMap = (Map<String, Object>) JacksonMapper.ofJson().readValue(render, Object.class);
-        }
+            if (renderedAttributesMap.get("issuetype") != null && !((String) renderedAttributesMap.get("issuetype")).isBlank()) {
+                fieldsMap.put("issuetype", renderedAttributesMap.get("issuetype"));
+            }
+            mainMap.put("fields", fieldsMap);
+            if (this.templateUri != null) {
+                String template = IOUtils.toString(
+                    Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(this.templateUri)),
+                    Charsets.UTF_8
+                );
+                String render = runContext.render(template, renderedAttributesMap);
+                mainMap = (Map<String, Object>) JacksonMapper.ofJson().readValue(render, Object.class);
 
+            }
         this.payload = JacksonMapper.ofJson().writeValueAsString(mainMap);
-
         return super.run(runContext);
     }
-
 }
