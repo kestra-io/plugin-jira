@@ -76,16 +76,7 @@ public abstract class JiraTemplate extends JiraClient {
                 "issuetype", runContext.render(issuetype)
             );
 
-            Map<String, Object> fieldsMap = new HashMap<>();
-            fieldsMap.put("projectKey", renderedAttributesMap.get("projectKey"));
-            fieldsMap.put("summary", renderedAttributesMap.get("summary"));
-            fieldsMap.put("description", renderedAttributesMap.get("description"));
-            fieldsMap.put("labels", renderedAttributesMap.get("labels"));
-
-            if (renderedAttributesMap.get("issuetype") != null && !((String) renderedAttributesMap.get("issuetype")).isBlank()) {
-                fieldsMap.put("issuetype", renderedAttributesMap.get("issuetype"));
-            }
-            mainMap.put("fields", fieldsMap);
+            mainMap.put("fields", renderedAttributesMap);
             if (this.templateUri != null) {
                 String template = IOUtils.toString(
                     Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(this.templateUri)),
