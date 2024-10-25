@@ -51,35 +51,42 @@ public abstract class JiraTemplate extends JiraClient {
     )
     @PluginProperty(dynamic = true)
     protected List<String> labels;
+
+    @Schema(
+        title = "Issue type of the Jira ticket",
+        description = "Examples: Story, Task, Bug (default value is Task)"
+    )
+    @PluginProperty(dynamic = true)
+    @Builder.Default
+    protected String issuetype = "Task";
+
     @SuppressWarnings("unchecked")
     @Override
     public VoidOutput run(RunContext runContext) throws Exception {
         if (payload != null && !payload.isBlank()) {
             return super.run(runContext);
         }
-
-        Map<String, Object> mainMap = new HashMap<>();
-        Map<String, Object> renderedAttributesMap = Map.of(
-            "projectKey", runContext.render(projectKey),
-            "summary", runContext.render(summary),
-            "labels", runContext.render(labels),
-            "description", runContext.render(description)
-        );
-
-        if (this.templateUri != null) {
-            String template = IOUtils.toString(
-                Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(this.templateUri)),
-                Charsets.UTF_8
+        
+            Map<String, Object> mainMap = new HashMap<>();
+            Map<String, Object> renderedAttributesMap = Map.of(
+                "projectKey", runContext.render(projectKey),
+                "summary", runContext.render(summary),
+                "labels", runContext.render(labels),
+                "description", runContext.render(description),
+                "issuetype", runContext.render(issuetype)
             );
 
-            String render = runContext.render(template, renderedAttributesMap);
+            mainMap.put("fields", renderedAttributesMap);
+            if (this.templateUri != null) {
+                String template = IOUtils.toString(
+                    Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(this.templateUri)),
+                    Charsets.UTF_8
+                );
+                String render = runContext.render(template, renderedAttributesMap);
+                mainMap = (Map<String, Object>) JacksonMapper.ofJson().readValue(render, Object.class);
 
-            mainMap = (Map<String, Object>) JacksonMapper.ofJson().readValue(render, Object.class);
-        }
-
+            }
         this.payload = JacksonMapper.ofJson().writeValueAsString(mainMap);
-
         return super.run(runContext);
     }
-
 }

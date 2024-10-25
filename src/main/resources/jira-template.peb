@@ -6,7 +6,7 @@
         "summary": "{{ summary }}",
         "description": "{{ description }}",
         "issuetype": {
-            "name": "Story"
+            "name": "{{ issuetype }}"
         },
         "labels": [
             "kestra-bot"
