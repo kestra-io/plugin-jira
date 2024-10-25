@@ -53,10 +53,12 @@ public abstract class JiraTemplate extends JiraClient {
     protected List<String> labels;
 
     @Schema(
-        title = "Issue type of the Jira ticket"
+        title = "Issue type of the Jira ticket",
+        description = "Examples: Story, Task, Bug (default value is Task)"
     )
     @PluginProperty(dynamic = true)
-    protected String issuetype;
+    @Builder.Default
+    protected String issuetype = "Task";
 
     @SuppressWarnings("unchecked")
     @Override
@@ -64,9 +66,7 @@ public abstract class JiraTemplate extends JiraClient {
         if (payload != null && !payload.isBlank()) {
             return super.run(runContext);
         }
-
-            issuetype = runContext.render(issuetype) == null ? "Task" : runContext.render(issuetype);
-
+        
             Map<String, Object> mainMap = new HashMap<>();
             Map<String, Object> renderedAttributesMap = Map.of(
                 "projectKey", runContext.render(projectKey),
