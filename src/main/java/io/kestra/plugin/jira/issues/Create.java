@@ -2,6 +2,7 @@ package io.kestra.plugin.jira.issues;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.VoidOutput;
 import io.kestra.core.runners.RunContext;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -68,8 +69,8 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
 public class Create extends JiraTemplate {
     @Override
     public VoidOutput run(RunContext runContext) throws Exception {
-        this.templateUri = "jira-template.peb";
-        this.baseUrl += ISSUE_API_ROUTE;
+        this.templateUri = Property.of("jira-template.peb");
+        this.baseUrl = this.baseUrl + ISSUE_API_ROUTE;
 
         return super.run(runContext);
     }

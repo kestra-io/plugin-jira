@@ -6,6 +6,7 @@ import com.google.common.base.Charsets;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.VoidOutput;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
@@ -61,34 +62,33 @@ public class UpdateFields extends JiraTemplate {
     @Schema(
         title = "Jira ticket key."
     )
-    @NotBlank
     @PluginProperty(dynamic = true)
+    @NotBlank
     private String issueIdOrKey;
 
     @Schema(
         title = "Fields map of names and new values."
     )
     @NotNull
-    @PluginProperty(dynamic = true)
-    private Map<String, Object> fields;
+    private Property<Map<String, Object>> fields;
 
     @Override
     public VoidOutput run(RunContext runContext) throws Exception {
-        this.templateUri = "update-field-template.peb";
+        this.templateUri = Property.of("update-field-template.peb");
         this.baseUrl += JiraUtil.ISSUE_API_ROUTE + runContext.render(this.issueIdOrKey);
 
         String template = IOUtils.toString(
-            Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(this.templateUri)),
+            Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(runContext.render(this.templateUri, String.class))),
             Charsets.UTF_8
         );
 
         String render = runContext.render(
-            template, Map.of("fields", runContext.render(this.fields))
+            template, Map.of("fields", this.fields.asMap(runContext, String.class, Object.class))
         );
 
         Map<String, Object> body = mapper.readValue(render, new TypeReference<>() {});
 
-        this.payload = mapper.writeValueAsString(body);
+        this.payload = Property.of(mapper.writeValueAsString(body));
         return super.run(runContext);
     }
 
