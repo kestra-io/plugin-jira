@@ -1,6 +1,7 @@
 package io.kestra.plugin.jira.issues;
 
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.VoidOutput;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
@@ -24,8 +25,7 @@ public abstract class JiraTemplate extends JiraClient {
         title = "Template to use",
         hidden = true
     )
-    @PluginProperty(dynamic = true)
-    protected String templateUri;
+    protected Property<String> templateUri;
 
     @Schema(
         title = "Atlassian project's key"
@@ -37,8 +37,7 @@ public abstract class JiraTemplate extends JiraClient {
     @Schema(
         title = "Summary of the ticket"
     )
-    @PluginProperty(dynamic = true)
-    protected String summary;
+    protected Property<String> summary;
 
     @Schema(
         title = "Description of the ticket to be created"
@@ -49,44 +48,43 @@ public abstract class JiraTemplate extends JiraClient {
     @Schema(
         title = "Labels associated with opened ticket"
     )
-    @PluginProperty(dynamic = true)
-    protected List<String> labels;
+    protected Property<List<String>> labels;
 
     @Schema(
         title = "Issue type of the Jira ticket",
         description = "Examples: Story, Task, Bug (default value is Task)"
     )
-    @PluginProperty(dynamic = true)
     @Builder.Default
-    protected String issuetype = "Task";
+    protected Property<String> issuetype = Property.of("Task");
 
     @SuppressWarnings("unchecked")
     @Override
     public VoidOutput run(RunContext runContext) throws Exception {
-        if (payload != null && !payload.isBlank()) {
+        final String payloadRendered = runContext.render(this.payload, String.class);
+        if (payloadRendered != null && !payloadRendered.isBlank()) {
             return super.run(runContext);
         }
-        
+
             Map<String, Object> mainMap = new HashMap<>();
             Map<String, Object> renderedAttributesMap = Map.of(
                 "projectKey", runContext.render(projectKey),
-                "summary", runContext.render(summary),
-                "labels", runContext.render(labels),
+                "summary", runContext.render(summary, String.class),
+                "labels", this.labels.asList(runContext, String.class),
                 "description", runContext.render(description),
-                "issuetype", runContext.render(issuetype)
+                "issuetype", runContext.render(issuetype, String.class)
             );
 
             mainMap.put("fields", renderedAttributesMap);
             if (this.templateUri != null) {
                 String template = IOUtils.toString(
-                    Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(this.templateUri)),
+                    Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(runContext.render(this.templateUri, String.class))),
                     Charsets.UTF_8
                 );
                 String render = runContext.render(template, renderedAttributesMap);
                 mainMap = (Map<String, Object>) JacksonMapper.ofJson().readValue(render, Object.class);
 
             }
-        this.payload = JacksonMapper.ofJson().writeValueAsString(mainMap);
+        this.payload = Property.of(JacksonMapper.ofJson().writeValueAsString(mainMap));
         return super.run(runContext);
     }
 }

@@ -4,6 +4,7 @@ import com.google.common.base.Charsets;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.VoidOutput;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
@@ -69,11 +70,11 @@ public class CreateComment extends JiraTemplate {
 
     @Override
     public VoidOutput run(RunContext runContext) throws Exception {
-        this.templateUri = "comment-jira-template.peb";
+        this.templateUri = Property.of("comment-jira-template.peb");
         this.baseUrl += ISSUE_API_ROUTE + runContext.render(this.issueIdOrKey) + COMMENT_API_ROUTE;
 
         String template = IOUtils.toString(
-            Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(this.templateUri)),
+            Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(runContext.render(this.templateUri, String.class))),
             Charsets.UTF_8
         );
 
@@ -81,7 +82,7 @@ public class CreateComment extends JiraTemplate {
 
         Map<String, Object> mainMap = (Map<String, Object>) JacksonMapper.ofJson().readValue(render, Object.class);
 
-        this.payload = JacksonMapper.ofJson().writeValueAsString(mainMap);
+        this.payload = Property.of(JacksonMapper.ofJson().writeValueAsString(mainMap));
         return super.run(runContext);
     }
 }
