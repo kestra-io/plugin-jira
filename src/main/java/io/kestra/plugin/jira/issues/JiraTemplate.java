@@ -5,6 +5,7 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.VoidOutput;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
+import io.kestra.plugin.jira.issues.annotations.NotBlankProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
@@ -30,9 +31,8 @@ public abstract class JiraTemplate extends JiraClient {
     @Schema(
         title = "Atlassian project's key"
     )
-    @PluginProperty(dynamic = true)
-    @NotBlank
-    protected String projectKey;
+    @NotBlankProperty
+    protected Property<String> projectKey;
 
     @Schema(
         title = "Summary of the ticket"
@@ -67,7 +67,7 @@ public abstract class JiraTemplate extends JiraClient {
 
             Map<String, Object> mainMap = new HashMap<>();
             Map<String, Object> renderedAttributesMap = Map.of(
-                "projectKey", runContext.render(projectKey),
+                "projectKey", runContext.render(projectKey, String.class),
                 "summary", runContext.render(summary, String.class),
                 "labels", this.labels.asList(runContext, String.class),
                 "description", runContext.render(description),
