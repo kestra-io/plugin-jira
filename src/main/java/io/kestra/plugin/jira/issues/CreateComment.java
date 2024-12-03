@@ -74,7 +74,7 @@ public class CreateComment extends JiraTemplate {
         this.baseUrl += ISSUE_API_ROUTE + runContext.render(this.issueIdOrKey) + COMMENT_API_ROUTE;
 
         String template = IOUtils.toString(
-            Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(runContext.render(this.templateUri, String.class))),
+            Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(runContext.render(this.templateUri).as(String.class).orElse(null))),
             Charsets.UTF_8
         );
 
