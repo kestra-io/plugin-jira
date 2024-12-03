@@ -60,24 +60,25 @@ public abstract class JiraTemplate extends JiraClient {
     @SuppressWarnings("unchecked")
     @Override
     public VoidOutput run(RunContext runContext) throws Exception {
-        final String payloadRendered = runContext.render(this.payload, String.class);
-        if (payloadRendered != null && !payloadRendered.isBlank()) {
+        var renderedPayload = runContext.render(this.payload).as(String.class);
+        if (renderedPayload.isPresent() && !renderedPayload.get().isBlank()) {
             return super.run(runContext);
         }
 
             Map<String, Object> mainMap = new HashMap<>();
             Map<String, Object> renderedAttributesMap = Map.of(
                 "projectKey", runContext.render(projectKey),
-                "summary", runContext.render(summary, String.class),
-                "labels", this.labels.asList(runContext, String.class),
+                "summary", runContext.render(this.summary).as(String.class),
+                "labels", runContext.render(this.labels).asList(String.class),
                 "description", runContext.render(description),
-                "issuetype", runContext.render(issuetype, String.class)
+                "issuetype", runContext.render(this.issuetype).as(String.class)
             );
 
             mainMap.put("fields", renderedAttributesMap);
-            if (this.templateUri != null) {
+            var renderedTemplateUri = runContext.render(this.templateUri).as(String.class);
+            if (renderedTemplateUri.isPresent()) {
                 String template = IOUtils.toString(
-                    Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(runContext.render(this.templateUri, String.class))),
+                    Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(renderedTemplateUri.get())),
                     Charsets.UTF_8
                 );
                 String render = runContext.render(template, renderedAttributesMap);

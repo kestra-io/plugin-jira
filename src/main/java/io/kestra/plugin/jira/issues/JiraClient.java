@@ -61,7 +61,7 @@ public abstract class JiraClient extends Task implements RunnableTask<VoidOutput
     @Override
     public VoidOutput run(RunContext runContext) throws Exception {
         String baseUrlRendered = runContext.render(this.baseUrl);
-        String payloadRendered = runContext.render(this.payload, String.class);
+        String payloadRendered = runContext.render(this.payload).as(String.class).orElse(null);
 
         try (DefaultHttpClient client = new DefaultHttpClient(URI.create(baseUrlRendered))) {
             MutableHttpRequest<String> request = getAuthorizedRequest(runContext, baseUrlRendered, payloadRendered);
@@ -79,17 +79,18 @@ public abstract class JiraClient extends Task implements RunnableTask<VoidOutput
     ) throws IllegalVariableEvaluationException {
         MutableHttpRequest<String> request = HttpRequest.POST(baseUrl, payload);
 
-        if (this.username != null && password != null) {
+        var renderedUsername = runContext.render(this.username).as(String.class);
+        var renderedPassword = runContext.render(this.password).as(String.class);
+        if (renderedUsername.isPresent() && renderedPassword.isPresent()) {
             return request.basicAuth(
-                runContext.render(this.username, String.class),
-                runContext.render(this.password, String.class)
+                renderedUsername.get(),
+                renderedPassword.get()
             );
         }
 
-        if (this.accessToken != null) {
-            return request.bearerAuth(
-                runContext.render(this.accessToken, String.class)
-            );
+        var renderedAccessToken = runContext.render(this.accessToken).as(String.class);
+        if (renderedAccessToken.isPresent()) {
+            return request.bearerAuth(renderedAccessToken.get());
         }
 
         throw new IllegalArgumentException("Missing required authentication fields");
