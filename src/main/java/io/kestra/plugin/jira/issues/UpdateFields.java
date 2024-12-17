@@ -22,6 +22,7 @@ import org.apache.commons.io.IOUtils;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 @SuperBuilder
 @ToString
@@ -77,13 +78,17 @@ public class UpdateFields extends JiraTemplate {
         this.templateUri = Property.of("update-field-template.peb");
         this.baseUrl += JiraUtil.ISSUE_API_ROUTE + runContext.render(this.issueIdOrKey);
 
+        String templateUri = runContext.render(this.templateUri)
+            .as(String.class)
+            .orElseThrow(() -> new IllegalArgumentException("Invalid templateUri: " + this.templateUri));
+
         String template = IOUtils.toString(
-            Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(runContext.render(this.templateUri, String.class))),
+            Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(templateUri)),
             Charsets.UTF_8
         );
 
         String render = runContext.render(
-            template, Map.of("fields", this.fields.asMap(runContext, String.class, Object.class))
+            template, Map.of("fields", runContext.render(this.fields).asMap(String.class, Object.class))
         );
 
         Map<String, Object> body = mapper.readValue(render, new TypeReference<>() {});

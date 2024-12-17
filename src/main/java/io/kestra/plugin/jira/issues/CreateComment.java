@@ -68,6 +68,7 @@ public class CreateComment extends JiraTemplate {
     @NotBlank
     protected String body;
 
+    @SuppressWarnings("unchecked")
     @Override
     public VoidOutput run(RunContext runContext) throws Exception {
         this.templateUri = Property.of("comment-jira-template.peb");
