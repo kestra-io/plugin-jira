@@ -197,7 +197,7 @@ release {
     tagTemplate = 'v${version}'
     buildTasks = ['classes']
     git {
-        requireBranch.set('develop')
+        requireBranch.set('master')
     }
 
     // Dynamically set properties with default values
