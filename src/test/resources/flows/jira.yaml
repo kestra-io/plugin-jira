@@ -9,6 +9,7 @@ listeners:
       username: your_email@example.com
       password: your_jira_api_token
       projectKey: myproject
+      issueTypeId: 10003
       summary: "{{ execution.id }} has failed on {{ taskrun.startDate }}"
       description: "See the link below for more details"
       labels:

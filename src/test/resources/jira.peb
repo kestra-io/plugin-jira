@@ -6,7 +6,7 @@
          "summary": "summary",
          "description": "description",
          "issuetype": {
-             "name": "Story"
+             "id": "10001"
          },
          "labels": "labels"
      }

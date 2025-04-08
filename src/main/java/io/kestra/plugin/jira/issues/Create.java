@@ -61,7 +61,6 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
                     labels:
                       - bug
                       - workflow
-                    issuetype: Task
                 """
         )
     }

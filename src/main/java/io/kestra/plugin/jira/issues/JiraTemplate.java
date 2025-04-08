@@ -9,9 +9,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
-import org.apache.commons.io.Charsets;
 import org.apache.commons.io.IOUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @SuperBuilder
@@ -51,11 +51,10 @@ public abstract class JiraTemplate extends JiraClient {
     protected Property<List<String>> labels;
 
     @Schema(
-        title = "Issue type of the Jira ticket",
-        description = "Examples: Story, Task, Bug (default value is Task)"
+        title = "Issue type ID of the Jira ticket",
+        description = "The issue type ID can be found using this URL : https://your-domain.atlassian.net/rest/api/2/issue/createmeta"
     )
-    @Builder.Default
-    protected Property<String> issuetype = Property.of("Task");
+    protected Property<String> issueTypeId;
 
     @SuppressWarnings("unchecked")
     @Override
@@ -66,20 +65,20 @@ public abstract class JiraTemplate extends JiraClient {
         }
 
             Map<String, Object> mainMap = new HashMap<>();
-            Map<String, Object> renderedAttributesMap = Map.of(
-                "projectKey", runContext.render(projectKey),
-                "summary", runContext.render(this.summary).as(String.class),
-                "labels", runContext.render(this.labels).asList(String.class),
-                "description", runContext.render(description),
-                "issuetype", runContext.render(this.issuetype).as(String.class)
-            );
+            Map<String, Object> renderedAttributesMap = new HashMap<>(Map.of("projectKey", runContext.render(projectKey)));
+            runContext.render(this.summary).as(String.class).ifPresent(s -> renderedAttributesMap.put("summary", s));
+
+            var renderedLabels = runContext.render(this.labels).asList(String.class);
+            if (!renderedLabels.isEmpty()) { renderedAttributesMap.put("labels", renderedLabels); }
+            if (runContext.render(description) != null) { renderedAttributesMap.put("description", runContext.render(description)); }
+            runContext.render(this.issueTypeId).as(String.class).ifPresent(s -> renderedAttributesMap.put("issueTypeId", s));
 
             mainMap.put("fields", renderedAttributesMap);
             var renderedTemplateUri = runContext.render(this.templateUri).as(String.class);
             if (renderedTemplateUri.isPresent()) {
                 String template = IOUtils.toString(
                     Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(renderedTemplateUri.get())),
-                    Charsets.UTF_8
+                    StandardCharsets.UTF_8
                 );
                 String render = runContext.render(template, renderedAttributesMap);
                 mainMap = (Map<String, Object>) JacksonMapper.ofJson().readValue(render, Object.class);
