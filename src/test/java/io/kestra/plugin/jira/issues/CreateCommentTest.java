@@ -22,7 +22,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 
 @KestraTest
-public class CreateCommentTest {
+class CreateCommentTest {
 
     @Inject
     private ApplicationContext applicationContext;
@@ -37,7 +37,7 @@ public class CreateCommentTest {
     protected LocalFlowRepositoryLoader repositoryLoader;
 
     @BeforeEach
-    protected void init() throws IOException, URISyntaxException {
+    void init() throws IOException, URISyntaxException {
         repositoryLoader.load(Objects.requireNonNull(CreateCommentTest.class.getClassLoader().getResource("flows")));
         this.runner.run();
     }

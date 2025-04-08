@@ -5,9 +5,11 @@
         },
         "summary": "{{ summary }}",
         "description": "{{ description }}",
+        {% if issueTypeId is defined %}
         "issuetype": {
-            "name": "{{ issuetype }}"
+            "id": {{ issueTypeId }}
         },
+        {% endif %}
         "labels": [
             "kestra-bot"
         {% for label in labels %}
