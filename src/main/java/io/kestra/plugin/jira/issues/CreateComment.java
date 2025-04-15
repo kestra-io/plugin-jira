@@ -29,7 +29,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Comment on a jira ticket based on workflow execution status."
+    title = "Comment on a Jira ticket based on a workflow execution status."
 )
 @Plugin(
     examples = {
