@@ -30,7 +30,7 @@ import java.util.Optional;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Updates Jira fields",
+    title = "Update one or more Jira fields.",
     description = "Update specific fields in a Jira ticket."
 )
 @Plugin(

@@ -17,7 +17,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Create a jira ticket based on workflow execution status."
+    title = "Create a Jira ticket based on a workflow execution status."
 )
 @Plugin(
     examples = {
