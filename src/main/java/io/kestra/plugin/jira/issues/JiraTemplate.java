@@ -52,7 +52,7 @@ public abstract class JiraTemplate extends JiraClient {
 
     @Schema(
         title = "Issue type ID of the Jira ticket",
-        description = "The issue type ID can be found using this URL : https://your-domain.atlassian.net/rest/api/2/issue/createmeta"
+        description = "The issue type ID can be found using this URL : https://your-domain.atlassian.net/rest/api/2/issue/createmeta."
     )
     protected Property<String> issueTypeId;
 
