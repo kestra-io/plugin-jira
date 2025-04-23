@@ -40,7 +40,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
                     labels:
                       - bug
                       - workflow
-                    issueTypeId: 10001
+                    issueTypeId: "10001"
                 """
         ),
         @Example(
