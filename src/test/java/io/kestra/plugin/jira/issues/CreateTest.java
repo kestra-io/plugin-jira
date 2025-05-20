@@ -7,6 +7,7 @@ import io.kestra.core.queues.QueueException;
 import io.kestra.core.repositories.LocalFlowRepositoryLoader;
 import io.kestra.core.runners.RunnerUtils;
 import io.kestra.core.runners.StandAloneRunner;
+import io.kestra.core.tenant.TenantService;
 import io.micronaut.context.ApplicationContext;
 import io.micronaut.runtime.server.EmbeddedServer;
 import jakarta.inject.Inject;
@@ -48,7 +49,7 @@ class CreateTest {
         embeddedServer.start();
 
         Execution execution = runnerUtils.runOne(
-            null,
+            TenantService.MAIN_TENANT,
             "io.kestra.tests",
             "jira",
             null,
