@@ -52,7 +52,7 @@ import java.util.Optional;
                     fields:
                       description: "Updated description of: {{ execution.id }}"
                       customfield_10005: "Updated value"
-              """
+                """
         )
     }
 )
