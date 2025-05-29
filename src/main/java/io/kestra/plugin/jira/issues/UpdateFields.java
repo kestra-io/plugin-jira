@@ -20,6 +20,7 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.apache.commons.io.IOUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -75,7 +76,7 @@ public class UpdateFields extends JiraTemplate {
 
     @Override
     public VoidOutput run(RunContext runContext) throws Exception {
-        this.templateUri = Property.of("update-field-template.peb");
+        this.templateUri = Property.ofValue("update-field-template.peb");
         this.baseUrl += JiraUtil.ISSUE_API_ROUTE + runContext.render(this.issueIdOrKey);
 
         String templateUri = runContext.render(this.templateUri)
@@ -84,7 +85,7 @@ public class UpdateFields extends JiraTemplate {
 
         String template = IOUtils.toString(
             Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(templateUri)),
-            Charsets.UTF_8
+            StandardCharsets.UTF_8
         );
 
         String render = runContext.render(
@@ -93,7 +94,7 @@ public class UpdateFields extends JiraTemplate {
 
         Map<String, Object> body = mapper.readValue(render, new TypeReference<>() {});
 
-        this.payload = Property.of(mapper.writeValueAsString(body));
+        this.payload = Property.ofValue(mapper.writeValueAsString(body));
         return super.run(runContext);
     }
 

@@ -69,7 +69,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
 public class Create extends JiraTemplate {
     @Override
     public VoidOutput run(RunContext runContext) throws Exception {
-        this.templateUri = Property.of("jira-template.peb");
+        this.templateUri = Property.ofValue("jira-template.peb");
         this.baseUrl = this.baseUrl + ISSUE_API_ROUTE;
 
         return super.run(runContext);
