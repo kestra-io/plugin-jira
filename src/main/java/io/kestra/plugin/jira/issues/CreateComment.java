@@ -1,6 +1,5 @@
 package io.kestra.plugin.jira.issues;
 
-import com.google.common.base.Charsets;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -17,6 +16,7 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.apache.commons.io.IOUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
 
@@ -71,19 +71,19 @@ public class CreateComment extends JiraTemplate {
     @SuppressWarnings("unchecked")
     @Override
     public VoidOutput run(RunContext runContext) throws Exception {
-        this.templateUri = Property.of("comment-jira-template.peb");
+        this.templateUri = Property.ofValue("comment-jira-template.peb");
         this.baseUrl += ISSUE_API_ROUTE + runContext.render(this.issueIdOrKey) + COMMENT_API_ROUTE;
 
         String template = IOUtils.toString(
             Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(runContext.render(this.templateUri).as(String.class).orElse(null))),
-            Charsets.UTF_8
+            StandardCharsets.UTF_8
         );
 
         String render = runContext.render(template, Map.of("body", runContext.render(body)));
 
         Map<String, Object> mainMap = (Map<String, Object>) JacksonMapper.ofJson().readValue(render, Object.class);
 
-        this.payload = Property.of(JacksonMapper.ofJson().writeValueAsString(mainMap));
+        this.payload = Property.ofValue(JacksonMapper.ofJson().writeValueAsString(mainMap));
         return super.run(runContext);
     }
 }
