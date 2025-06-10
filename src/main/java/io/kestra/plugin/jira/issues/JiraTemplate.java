@@ -84,7 +84,7 @@ public abstract class JiraTemplate extends JiraClient {
                 mainMap = (Map<String, Object>) JacksonMapper.ofJson().readValue(render, Object.class);
 
             }
-        this.payload = Property.of(JacksonMapper.ofJson().writeValueAsString(mainMap));
+        this.payload = Property.ofValue(JacksonMapper.ofJson().writeValueAsString(mainMap));
         return super.run(runContext);
     }
 }
