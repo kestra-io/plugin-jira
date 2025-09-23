@@ -26,7 +26,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
             full = true,
             code = """
                 id: jira_flow
-                namespace: company.myteam
+                namespace: company.team
 
                 tasks:
                   - id: create_issue
