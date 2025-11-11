@@ -6,7 +6,7 @@ import io.kestra.core.models.executions.Execution;
 import io.kestra.core.queues.QueueException;
 import io.kestra.core.repositories.LocalFlowRepositoryLoader;
 import io.kestra.core.runners.RunContextFactory;
-import io.kestra.core.runners.RunnerUtils;
+import io.kestra.core.runners.TestRunnerUtils;
 import io.kestra.core.runners.TestRunner;
 import io.kestra.core.tenant.TenantService;
 import io.micronaut.context.ApplicationContext;
@@ -33,7 +33,7 @@ public class UpdateFieldsTest {
     protected TestRunner runner;
 
     @Inject
-    protected RunnerUtils runnerUtils;
+    protected TestRunnerUtils runnerUtils;
 
     @Inject
     protected LocalFlowRepositoryLoader repositoryLoader;
