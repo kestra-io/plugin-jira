@@ -1,0 +1,8 @@
+group: io.kestra.plugin.jira
+name: "jira"
+title: "Atlassian Jira"
+description: "Atlassian Jira plugin for Kestra"
+body: ""
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"
