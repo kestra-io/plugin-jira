@@ -1,8 +1,8 @@
 group: io.kestra.plugin.jira.issues
 name: "issues"
 title: "Issues"
-description: "This sub-group of plugins contains tasks for Jira."
-body: ""
+description: "Tasks that file, update, comment on, and search Jira issues."
+body: "Set Jira connection details and credentials, provide project keys, issue types/fields, and JQL to create or update issues, add comments, or retrieve issue details for workflow automation."
 videos: []
 createdBy: "Kestra Core Team"
 managedBy: "Kestra Core Team"

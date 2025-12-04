@@ -1,8 +1,8 @@
 group: io.kestra.plugin.jira
 name: "jira"
 title: "Atlassian Jira"
-description: "Atlassian Jira plugin for Kestra"
-body: ""
+description: "Tasks that create, update, and search Jira issues."
+body: "Provide Jira cloud/server URL with user/API token or PAT, project keys, and issue fields to create or modify issues, add comments, or search via JQL, returning issue payloads for incident and backlog workflows."
 videos: []
 createdBy: "Kestra Core Team"
 managedBy: "Kestra Core Team"
