@@ -5,7 +5,7 @@ listeners:
   - tasks:
     - id: jira
       type: io.kestra.plugin.jira.issues.Create
-      baseUrl: your-domain.atlassian.net
+      baseUrl: https://your-domain.atlassian.net
       username: your_email@example.com
       password: your_jira_api_token
       projectKey: myproject

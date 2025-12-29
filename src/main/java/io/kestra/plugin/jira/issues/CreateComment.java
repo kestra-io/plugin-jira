@@ -43,7 +43,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
                 tasks:
                   - id: create_comment_on_a_ticket
                     type: io.kestra.plugin.jira.issues.CreateComment
-                    baseUrl: your-domain.atlassian.net
+                    baseUrl: https://your-domain.atlassian.net
                     username: your_email@example.com
                     password: "{{ secret('jira_api_token') }}"
                     projectKey: project_key
