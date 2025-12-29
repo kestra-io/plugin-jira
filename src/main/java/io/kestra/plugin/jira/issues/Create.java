@@ -31,7 +31,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
                 tasks:
                   - id: create_issue
                     type: io.kestra.plugin.jira.issues.Create
-                    baseUrl: your-domain.atlassian.net
+                    baseUrl: https://your-domain.atlassian.net
                     username: your_email@example.com
                     password: "{{ secret('your_jira_api_token') }}"
                     projectKey: myproject
@@ -53,7 +53,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
                 tasks:
                   - id: create_issue
                     type: io.kestra.plugin.jira.issues.Create
-                    baseUrl: your-domain.atlassian.net
+                    baseUrl: https://your-domain.atlassian.net
                     accessToken: "{{ secret('your_jira_access_token') }}"
                     projectKey: myproject
                     summary: "Workflow failed"

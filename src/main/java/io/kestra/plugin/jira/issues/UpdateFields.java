@@ -46,7 +46,7 @@ import java.util.Optional;
                 tasks:
                   - id: update_ticket_field
                     type: io.kestra.plugin.jira.issues.UpdateFields
-                    baseUrl: your-domain.atlassian.net
+                    baseUrl: https://your-domain.atlassian.net
                     username: your_email@example.com
                     password: "{{ secret('your_jira_api_token') }}"
                     issueIdOrKey: YOUR_ISSUE_KEY
