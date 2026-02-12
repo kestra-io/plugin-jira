@@ -1,7 +1,5 @@
 @PluginSubGroup(
-    description = "This sub-group of plugins contains tasks for Jira.",
-    categories = PluginSubGroup.PluginCategory.TOOL,
-    categories = {
+    description = "This sub-group of plugins contains tasks for Jira.",categories = {
         PluginSubGroup.PluginCategory.BUSINESS
     }
 )
