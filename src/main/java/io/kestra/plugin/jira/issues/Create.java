@@ -17,7 +17,8 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Create a Jira ticket based on a workflow execution status."
+    title = "Create a Jira issue",
+    description = "Builds a JSON payload from `jira-template.peb` and posts to `/rest/api/2/issue/`. Renders project, summary, description, labels, and issue type with flow variables; template always adds a `kestra-bot` label."
 )
 @Plugin(
     examples = {
@@ -33,7 +34,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
                     type: io.kestra.plugin.jira.issues.Create
                     baseUrl: https://your-domain.atlassian.net
                     username: your_email@example.com
-                    password: "{{ secret('your_jira_api_token') }}"
+                    password: "{{ secret('JIRA_API_TOKEN') }}"
                     projectKey: myproject
                     summary: "Workflow failed"
                     description: "{{ execution.id }} has failed on {{ taskrun.startDate }} See the link below for more details"
