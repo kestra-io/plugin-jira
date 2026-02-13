@@ -22,37 +22,41 @@ import java.util.*;
 public abstract class JiraTemplate extends JiraClient {
 
     @Schema(
-        title = "Template to use",
+        title = "Template resource path",
         hidden = true
     )
     protected Property<String> templateUri;
 
     @Schema(
-        title = "Atlassian project's key"
+        title = "Project key",
+        description = "Jira project key injected into the payload."
     )
     @PluginProperty(dynamic = true)
     @NotBlank
     protected String projectKey;
 
     @Schema(
-        title = "Summary of the ticket"
+        title = "Issue summary",
+        description = "Rendered summary for the issue; templating supported."
     )
     protected Property<String> summary;
 
     @Schema(
-        title = "Description of the ticket to be created"
+        title = "Issue description",
+        description = "Rendered description text for the issue; templating supported."
     )
     @PluginProperty(dynamic = true)
     protected String description;
 
     @Schema(
-        title = "Labels associated with opened ticket"
+        title = "Labels",
+        description = "Rendered list of labels added to the issue; `kestra-bot` is always included by the template."
     )
     protected Property<List<String>> labels;
 
     @Schema(
-        title = "Issue type ID of the Jira ticket",
-        description = "The issue type ID can be found using this URL : https://your-domain.atlassian.net/rest/api/2/issue/createmeta."
+        title = "Issue type ID",
+        description = "Optional Jira issue type ID; discover available values at `https://your-domain.atlassian.net/rest/api/2/issue/createmeta.`"
     )
     protected Property<String> issueTypeId;
 
