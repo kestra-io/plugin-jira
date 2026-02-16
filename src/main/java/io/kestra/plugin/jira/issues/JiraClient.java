@@ -31,36 +31,38 @@ import java.util.Base64;
 public abstract class JiraClient extends Task implements RunnableTask<VoidOutput> {
 
     @Schema(
-        title = "Atlassian URL"
+        title = "Jira REST base URL",
+        description = "Rendered HTTPS root such as `https://your-domain.atlassian.net`; task appends the REST route before sending the POST. Avoid a trailing slash."
     )
     @PluginProperty(dynamic = true)
     @NotBlank
     protected String baseUrl;
 
     @Schema(
-        title = "Atlassian Username",
-        description = "(Required for basic & API token authorization)"
+        title = "Jira username or email",
+        description = "Used with `password` for Basic/API token authentication; ignored when an `accessToken` is provided."
     )
     protected Property<String> username;
 
     @Schema(
-        title = "Atlassian password or API token",
-        description = "(Required for basic & API token authorization)"
+        title = "Jira password or API token",
+        description = "Used with `username` for Basic/API token authentication; ignored when an `accessToken` is provided."
     )
     protected Property<String> password;
 
     @Schema(
-        title = "Atlassian OAuth access token",
-        description = "(Required for OAuth authorization)"
+        title = "Jira OAuth access token",
+        description = "Bearer token for OAuth; used only when `username`/`password` are not both set."
     )
     protected Property<String> accessToken;
 
     @Schema(
-        title = "Payload"
+        title = "Prepared JSON payload",
+        description = "Rendered body sent as `application/json`; usually built from a template when not explicitly provided."
     )
     protected Property<String> payload;
 
-    @Schema(title = "The HTTP client configuration.")
+    @Schema(title = "HTTP client configuration")
     HttpConfiguration options;
 
     public VoidOutput run(RunContext runContext) throws Exception {

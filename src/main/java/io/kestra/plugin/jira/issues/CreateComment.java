@@ -29,7 +29,8 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Comment on a Jira ticket based on a workflow execution status."
+    title = "Add a comment to a Jira issue",
+    description = "Renders the issue key and comment body, fills `comment-jira-template.peb`, then posts to `/rest/api/2/issue/{issueIdOrKey}/comment`. Uses the same authentication fields as other Jira tasks."
 )
 @Plugin(
     examples = {
@@ -45,7 +46,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
                     type: io.kestra.plugin.jira.issues.CreateComment
                     baseUrl: https://your-domain.atlassian.net
                     username: your_email@example.com
-                    password: "{{ secret('jira_api_token') }}"
+                    password: "{{ secret('JIRA_API_TOKEN') }}"
                     projectKey: project_key
                     issueIdOrKey: "TID-53"
                     body: "This ticket is not moving, do we need to outsource this!"
@@ -55,14 +56,16 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
 )
 public class CreateComment extends JiraTemplate {
     @Schema(
-        title = "Jira ticket key"
+        title = "Issue key or id to comment",
+        description = "Rendered value appended to `/rest/api/2/issue/` before `/comment`."
     )
     @PluginProperty(dynamic = true)
     @NotBlank
     protected String issueIdOrKey;
 
     @Schema(
-        title = "The comment's content"
+        title = "Comment text",
+        description = "Rendered markdown or text inserted as `body` via `comment-jira-template.peb`."
     )
     @PluginProperty(dynamic = true)
     @NotBlank

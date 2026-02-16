@@ -31,8 +31,8 @@ import java.util.Optional;
 @Getter
 @NoArgsConstructor
 @Schema(
-    title = "Update one or more Jira fields.",
-    description = "Update specific fields in a Jira ticket."
+    title = "Update fields on a Jira issue",
+    description = "Sends a POST to Jira's issue API to change selected fields. Renders `issueIdOrKey` and `fields` with flow variables, then serializes values via `update-field-template.peb` (nested objects are not supported). Requires Jira authentication (Basic or OAuth) configured on the task."
 )
 @Plugin(
     examples = {
@@ -48,7 +48,7 @@ import java.util.Optional;
                     type: io.kestra.plugin.jira.issues.UpdateFields
                     baseUrl: https://your-domain.atlassian.net
                     username: your_email@example.com
-                    password: "{{ secret('your_jira_api_token') }}"
+                    password: "{{ secret('JIRA_API_TOKEN') }}"
                     issueIdOrKey: YOUR_ISSUE_KEY
                     fields:
                       description: "Updated description of: {{ execution.id }}"
@@ -62,14 +62,16 @@ public class UpdateFields extends JiraTemplate {
     private final static ObjectMapper mapper = JacksonMapper.ofJson();
 
     @Schema(
-        title = "Jira ticket key."
+        title = "Issue key or id to update",
+        description = "Rendered value appended to `/rest/api/2/issue/` before sending the request."
     )
     @PluginProperty(dynamic = true)
     @NotBlank
     private String issueIdOrKey;
 
     @Schema(
-        title = "Fields map of names and new values."
+        title = "Field names and new values",
+        description = "Rendered map of field keys to updated values; entries are stringified by the template, so use simple scalar values."
     )
     @NotNull
     private Property<Map<String, Object>> fields;
