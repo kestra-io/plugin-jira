@@ -1,5 +1,9 @@
 package io.kestra.plugin.jira.issues;
 
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.http.HttpRequest;
 import io.kestra.core.http.HttpResponse;
@@ -11,6 +15,7 @@ import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.Task;
 import io.kestra.core.models.tasks.VoidOutput;
 import io.kestra.core.runners.RunContext;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.EqualsAndHashCode;
@@ -18,10 +23,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-
-import java.net.URI;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 
 @SuperBuilder
 @ToString
@@ -80,8 +81,7 @@ public abstract class JiraClient extends Task implements RunnableTask<VoidOutput
     }
 
     private HttpRequest getAuthorizedRequest(
-        RunContext runContext
-    ) throws IllegalVariableEvaluationException {
+        RunContext runContext) throws IllegalVariableEvaluationException {
 
         String baseUrlRendered = runContext.render(this.baseUrl);
         String payloadRendered = runContext.render(this.payload).as(String.class).orElse(null);

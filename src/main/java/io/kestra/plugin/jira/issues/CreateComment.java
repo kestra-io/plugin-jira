@@ -1,5 +1,11 @@
 package io.kestra.plugin.jira.issues;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.Objects;
+
+import org.apache.commons.io.IOUtils;
+
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -7,6 +13,7 @@ import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.VoidOutput;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.EqualsAndHashCode;
@@ -14,11 +21,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-import org.apache.commons.io.IOUtils;
-
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
-import java.util.Objects;
 
 import static io.kestra.plugin.jira.issues.JiraUtil.COMMENT_API_ROUTE;
 import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
