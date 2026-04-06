@@ -61,7 +61,7 @@ public class CreateComment extends JiraTemplate {
         title = "Issue key or id to comment",
         description = "Rendered value appended to `/rest/api/2/issue/` before `/comment`."
     )
-    @PluginProperty(dynamic = true)
+    @PluginProperty(dynamic = true, group = "main")
     @NotBlank
     protected String issueIdOrKey;
 
@@ -69,7 +69,7 @@ public class CreateComment extends JiraTemplate {
         title = "Comment text",
         description = "Rendered markdown or text inserted as `body` via `comment-jira-template.peb`."
     )
-    @PluginProperty(dynamic = true)
+    @PluginProperty(dynamic = true, group = "main")
     @NotBlank
     protected String body;
 

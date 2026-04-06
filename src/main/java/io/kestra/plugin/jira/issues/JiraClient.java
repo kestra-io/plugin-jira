@@ -35,7 +35,7 @@ public abstract class JiraClient extends Task implements RunnableTask<VoidOutput
         title = "Jira REST base URL",
         description = "Rendered HTTPS root such as `https://your-domain.atlassian.net`; task appends the REST route before sending the POST. Avoid a trailing slash."
     )
-    @PluginProperty(dynamic = true)
+    @PluginProperty(dynamic = true, group = "connection")
     @NotBlank
     protected String baseUrl;
 
@@ -43,24 +43,28 @@ public abstract class JiraClient extends Task implements RunnableTask<VoidOutput
         title = "Jira username or email",
         description = "Used with `password` for Basic/API token authentication; ignored when an `accessToken` is provided."
     )
+    @PluginProperty(group = "connection")
     protected Property<String> username;
 
     @Schema(
         title = "Jira password or API token",
         description = "Used with `username` for Basic/API token authentication; ignored when an `accessToken` is provided."
     )
+    @PluginProperty(group = "connection")
     protected Property<String> password;
 
     @Schema(
         title = "Jira OAuth access token",
         description = "Bearer token for OAuth; used only when `username`/`password` are not both set."
     )
+    @PluginProperty(group = "connection")
     protected Property<String> accessToken;
 
     @Schema(
         title = "Prepared JSON payload",
         description = "Rendered body sent as `application/json`; usually built from a template when not explicitly provided."
     )
+    @PluginProperty(group = "advanced")
     protected Property<String> payload;
 
     @Schema(title = "HTTP client configuration")
