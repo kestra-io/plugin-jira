@@ -27,13 +27,14 @@ public abstract class JiraTemplate extends JiraClient {
         title = "Template resource path",
         hidden = true
     )
+    @PluginProperty(group = "advanced")
     protected Property<String> templateUri;
 
     @Schema(
         title = "Project key",
         description = "Jira project key injected into the payload."
     )
-    @PluginProperty(dynamic = true)
+    @PluginProperty(dynamic = true, group = "connection")
     @NotBlank
     protected String projectKey;
 
@@ -41,25 +42,28 @@ public abstract class JiraTemplate extends JiraClient {
         title = "Issue summary",
         description = "Rendered summary for the issue; templating supported."
     )
+    @PluginProperty(group = "advanced")
     protected Property<String> summary;
 
     @Schema(
         title = "Issue description",
         description = "Rendered description text for the issue; templating supported."
     )
-    @PluginProperty(dynamic = true)
+    @PluginProperty(dynamic = true, group = "advanced")
     protected String description;
 
     @Schema(
         title = "Labels",
         description = "Rendered list of labels added to the issue; `kestra-bot` is always included by the template."
     )
+    @PluginProperty(group = "advanced")
     protected Property<List<String>> labels;
 
     @Schema(
         title = "Issue type ID",
         description = "Optional Jira issue type ID; discover available values at `https://your-domain.atlassian.net/rest/api/2/issue/createmeta.`"
     )
+    @PluginProperty(group = "advanced")
     protected Property<String> issueTypeId;
 
     @SuppressWarnings("unchecked")

@@ -66,7 +66,7 @@ public class UpdateFields extends JiraTemplate {
         title = "Issue key or id to update",
         description = "Rendered value appended to `/rest/api/2/issue/` before sending the request."
     )
-    @PluginProperty(dynamic = true)
+    @PluginProperty(dynamic = true, group = "main")
     @NotBlank
     private String issueIdOrKey;
 
@@ -75,6 +75,7 @@ public class UpdateFields extends JiraTemplate {
         description = "Rendered map of field keys to updated values; entries are stringified by the template, so use simple scalar values."
     )
     @NotNull
+    @PluginProperty(group = "main")
     private Property<Map<String, Object>> fields;
 
     @Override
