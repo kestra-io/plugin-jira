@@ -13,7 +13,6 @@ tasks:
       description: "Changed description"
       summary: "Changed summary"
 
-triggers:
   - id: seq
     type: io.kestra.plugin.core.flow.Sequential
     tasks:
