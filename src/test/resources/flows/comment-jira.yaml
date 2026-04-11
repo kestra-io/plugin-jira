@@ -1,7 +1,6 @@
 id: comment-jira
 namespace: io.kestra.tests
 
-
 tasks:
   - id: jira
     type: io.kestra.plugin.jira.issues.CreateComment
@@ -12,7 +11,6 @@ tasks:
     issueIdOrKey: issuekey
     body: "{{ execution.id }} has failed on {{ taskrun.startDate }}"
 
-triggers:
   - id: seq
     type: io.kestra.plugin.core.flow.Sequential
     tasks:
