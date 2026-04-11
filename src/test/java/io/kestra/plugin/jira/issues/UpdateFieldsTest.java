@@ -19,7 +19,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
 @KestraTest
-@WireMockTest(httpPort = 8080)
+@WireMockTest(httpPort = 5083)
 class UpdateFieldsTest {
 
     @Inject
