@@ -1,26 +1,14 @@
 id: update-fields-jira
 namespace: io.kestra.tests
 
-inputs:
-  - id: url
-    type: STRING
-    defaults: "http://localhost:59443"
-
 tasks:
-  - id: webhook
-    type: io.kestra.plugin.discord.DiscordIncomingWebhook
-    url: "{{ inputs.url }}/webhook-unit-test"
-    payload: |
-      {
-        "content": "Flow {{ trigger.flowId }} in namespace {{ trigger.namespace }} {{ trigger.state }}"
-      }
-
-triggers:
-  - id: on_failure
-    type: io.kestra.plugin.core.trigger.Flow
-    preconditions:
-      id: flow_trigger
-      flows:
-        - namespace: io.kestra.tests
-          flowId: main-flow-that-fails
-          states: [ FAILED ]
+  - id: jira
+    type: io.kestra.plugin.jira.issues.UpdateFields
+    baseUrl: https://your-domain.atlassian.net
+    username: your_email@example.com
+    password: your_jira_api_token
+    projectKey: myproject
+    issueIdOrKey: issuekey
+    fields:
+      description: "Changed description"
+      summary: "Changed summary"
