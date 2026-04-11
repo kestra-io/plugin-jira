@@ -11,8 +11,12 @@ tasks:
     issueIdOrKey: issuekey
     body: "{{ execution.id }} has failed on {{ taskrun.startDate }}"
 
-  - id: seq
-    type: io.kestra.plugin.core.flow.Sequential
-    tasks:
-      - id: failed
-        type: io.kestra.plugin.core.execution.Fail
+triggers:
+  - id: on_failure
+    type: io.kestra.plugin.core.trigger.Flow
+    preconditions:
+      id: flow_trigger
+      flows:
+        - namespace: io.kestra.tests
+          flowId: main-flow-that-fails
+          states: [ FAILED ]
