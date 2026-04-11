@@ -1,6 +1,11 @@
 id: comment-jira
 namespace: io.kestra.tests
 
+inputs:
+  - id: url
+    type: STRING
+    defaults: "http://localhost:59443"
+
 tasks:
   - id: jira
     type: io.kestra.plugin.jira.issues.CreateComment
