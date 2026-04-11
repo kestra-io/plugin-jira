@@ -2,7 +2,6 @@ package io.kestra.plugin.jira.issues;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeoutException;
 
@@ -17,8 +16,6 @@ import io.kestra.core.runners.TestRunner;
 import io.kestra.core.runners.TestRunnerUtils;
 import io.kestra.core.tenant.TenantService;
 
-import io.micronaut.context.ApplicationContext;
-import io.micronaut.runtime.server.EmbeddedServer;
 import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -26,9 +23,6 @@ import static org.hamcrest.Matchers.hasSize;
 
 @KestraTest
 public class UpdateFieldsTest {
-
-    @Inject
-    private ApplicationContext applicationContext;
 
     @Inject
     protected TestRunner runner;
@@ -47,27 +41,6 @@ public class UpdateFieldsTest {
 
     @Test
     void flow() throws TimeoutException, QueueException {
-        EmbeddedServer embeddedServer = applicationContext.getBean(EmbeddedServer.class);
-        embeddedServer.start();
-
-        Execution execution = runnerUtils.runOne(
-            TenantService.MAIN_TENANT,
-            "io.kestra.tests",
-            "update-fields-jira",
-            null,
-            (f, e) -> Map.of("url", embeddedServer.getURI().toString())
-        );
-
-        assertThat(execution.getTaskRunList(), hasSize(1));
-    }
-
-}
-
-    @Test
-    void flow() throws TimeoutException, QueueException {
-        EmbeddedServer embeddedServer = applicationContext.getBean(EmbeddedServer.class);
-        embeddedServer.start();
-
         Execution execution = runnerUtils.runOne(
             TenantService.MAIN_TENANT,
             "io.kestra.tests",
@@ -78,5 +51,4 @@ public class UpdateFieldsTest {
 
         assertThat(execution.getTaskRunList(), hasSize(1));
     }
-
 }
