@@ -36,7 +36,7 @@ class UpdateFieldsTest {
             .baseUrl(wireMockRuntimeInfo.getHttpBaseUrl())
             .username(Property.ofValue("test@test.com"))
             .password(Property.ofValue("api-token"))
-            .projectKey(Property.ofValue("TEST"))
+            .projectKey("TEST")
             .issueIdOrKey("TEST-123")
             .fields(Property.ofValue(Map.of("description", "Updated description")))
             .build();

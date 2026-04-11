@@ -12,9 +12,9 @@ import io.kestra.core.runners.RunContextFactory;
 
 import jakarta.inject.Inject;
 
+import java.util.Map;
+
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
 
 @KestraTest
 @WireMockTest(httpPort = 8081)
@@ -34,9 +34,9 @@ class CreateCommentTest {
             .baseUrl(wireMockRuntimeInfo.getHttpBaseUrl())
             .username(Property.ofValue("test@test.com"))
             .password(Property.ofValue("api-token"))
-            .projectKey(Property.ofValue("TEST"))
+            .projectKey("TEST")
             .issueIdOrKey("TEST-123")
-            .body(Property.ofValue("Test comment body"))
+            .body("Test comment body")
             .build();
 
         task.run(runContext);

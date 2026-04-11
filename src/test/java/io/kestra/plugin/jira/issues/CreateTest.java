@@ -37,10 +37,10 @@ class CreateTest {
             .baseUrl(wireMockRuntimeInfo.getHttpBaseUrl())
             .username(Property.ofValue("test@test.com"))
             .password(Property.ofValue("api-token"))
-            .projectKey(Property.ofValue("TEST"))
+            .projectKey("TEST")
             .issueTypeId(Property.ofValue("10003"))
             .summary(Property.ofValue("Test issue summary"))
-            .description(Property.ofValue("Test issue description"))
+            .description("Test issue description")
             .labels(Property.ofValue(List.of("bug", "test")))
             .build();
 
