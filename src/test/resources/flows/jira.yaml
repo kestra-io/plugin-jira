@@ -18,7 +18,7 @@ listeners:
 
 tasks:
   - id: seq
-    type: io.kestra.core.tasks.flows.Sequential
+    type: io.kestra.plugin.core.flows.Sequential
     tasks:
       - id: failed
-        type: io.kestra.core.tasks.execution.Fail
+        type: io.kestra.plugin.core.execution.Fail
