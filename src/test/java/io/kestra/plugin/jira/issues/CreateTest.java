@@ -1,64 +1,53 @@
 package io.kestra.plugin.jira.issues;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.util.Objects;
-import java.util.concurrent.TimeoutException;
+import java.util.List;
+import java.util.Map;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.google.common.collect.ImmutableMap;
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
+import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 
 import io.kestra.core.junit.annotations.KestraTest;
-import io.kestra.core.models.executions.Execution;
-import io.kestra.core.queues.QueueException;
-import io.kestra.core.repositories.LocalFlowRepositoryLoader;
-import io.kestra.core.runners.TestRunner;
-import io.kestra.core.runners.TestRunnerUtils;
-import io.kestra.core.tenant.TenantService;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.runners.RunContext;
+import io.kestra.core.runners.RunContextFactory;
 
-import io.micronaut.context.ApplicationContext;
-import io.micronaut.runtime.server.EmbeddedServer;
 import jakarta.inject.Inject;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 
 @KestraTest
+@WireMockTest(httpPort = 8082)
 class CreateTest {
 
     @Inject
-    private ApplicationContext applicationContext;
-
-    @Inject
-    protected TestRunner runner;
-
-    @Inject
-    protected TestRunnerUtils runnerUtils;
-
-    @Inject
-    protected LocalFlowRepositoryLoader repositoryLoader;
-
-    @BeforeEach
-    void init() throws IOException, URISyntaxException {
-        repositoryLoader.load(Objects.requireNonNull(CreateTest.class.getClassLoader().getResource("flows")));
-        this.runner.run();
-    }
+    private RunContextFactory runContextFactory;
 
     @Test
-    void flow() throws TimeoutException, QueueException {
-        EmbeddedServer embeddedServer = applicationContext.getBean(EmbeddedServer.class);
-        embeddedServer.start();
+    void run(WireMockRuntimeInfo wireMockRuntimeInfo) throws Exception {
+        stubFor(any(urlPathEqualTo("/rest/api/2/issue"))
+            .willReturn(okJson("{\"key\":\"TEST-123\",\"id\":\"12345\"}")));
 
-        Execution execution = runnerUtils.runOne(
-            TenantService.MAIN_TENANT,
-            "io.kestra.tests",
-            "jira",
-            null,
-            (f, e) -> ImmutableMap.of("url", embeddedServer.getURI().toString())
-        );
+        RunContext runContext = runContextFactory.of(Map.of());
 
-        assertThat(execution.getTaskRunList(), hasSize(1));
+        Create task = Create.builder()
+            .baseUrl(wireMockRuntimeInfo.getHttpBaseUrl())
+            .username(Property.ofValue("test@test.com"))
+            .password(Property.ofValue("api-token"))
+            .projectKey(Property.ofValue("TEST"))
+            .issueTypeId(Property.ofValue("10003"))
+            .summary(Property.ofValue("Test issue summary"))
+            .description(Property.ofValue("Test issue description"))
+            .labels(Property.ofValue(List.of("bug", "test")))
+            .build();
+
+        task.run(runContext);
+
+        verify(postRequestedFor(urlPathEqualTo("/rest/api/2/issue"))
+            .withHeader("Content-Type", equalTo("application/json"))
+            .withHeader("Authorization", matching("Basic .+")));
     }
 }
