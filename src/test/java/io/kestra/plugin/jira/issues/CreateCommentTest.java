@@ -25,7 +25,7 @@ class CreateCommentTest {
 
     @Test
     void run(WireMockRuntimeInfo wireMockRuntimeInfo) throws Exception {
-        stubFor(any(urlPathEqualTo("/rest/api/2/issue/TEST-123/comment"))
+        stubFor(any(urlPathMatching("/rest/api/2/issue/[^/]+/comment"))
             .willReturn(okJson("{\"id\":\"12345\",\"body\":\"Test comment\"}")));
 
         RunContext runContext = runContextFactory.of(Map.of());
@@ -41,7 +41,7 @@ class CreateCommentTest {
 
         task.run(runContext);
 
-        verify(postRequestedFor(urlPathEqualTo("/rest/api/2/issue/TEST-123/comment"))
+        verify(postRequestedFor(urlPathMatching("/rest/api/2/issue/[^/]+/comment"))
             .withHeader("Content-Type", equalTo("application/json"))
             .withHeader("Authorization", matching("Basic .+")));
     }

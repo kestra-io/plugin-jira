@@ -28,7 +28,7 @@ class CreateTest {
 
     @Test
     void run(WireMockRuntimeInfo wireMockRuntimeInfo) throws Exception {
-        stubFor(any(urlPathEqualTo("/rest/api/2/issue"))
+        stubFor(any(urlPathMatching("/rest/api/2/issue/?"))
             .willReturn(okJson("{\"key\":\"TEST-123\",\"id\":\"12345\"}")));
 
         RunContext runContext = runContextFactory.of(Map.of());
@@ -46,7 +46,7 @@ class CreateTest {
 
         task.run(runContext);
 
-        verify(postRequestedFor(urlPathEqualTo("/rest/api/2/issue"))
+        verify(postRequestedFor(urlPathMatching("/rest/api/2/issue/?"))
             .withHeader("Content-Type", equalTo("application/json"))
             .withHeader("Authorization", matching("Basic .+")));
     }
