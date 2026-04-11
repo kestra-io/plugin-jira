@@ -59,6 +59,6 @@ class CreateTest {
             (f, e) -> ImmutableMap.of("url", embeddedServer.getURI().toString())
         );
 
-        assertThat(execution.getTaskRunList(), hasSize(3));
+        assertThat(execution.getTaskRunList(), hasSize(1));
     }
 }

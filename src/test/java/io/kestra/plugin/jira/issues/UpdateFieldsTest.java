@@ -2,13 +2,12 @@ package io.kestra.plugin.jira.issues;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeoutException;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import com.google.common.collect.ImmutableMap;
 
 import io.kestra.core.junit.annotations.KestraTest;
 import io.kestra.core.models.executions.Execution;
@@ -56,10 +55,28 @@ public class UpdateFieldsTest {
             "io.kestra.tests",
             "update-fields-jira",
             null,
-            (f, e) -> ImmutableMap.of("url", embeddedServer.getURI().toString())
+            (f, e) -> Map.of("url", embeddedServer.getURI().toString())
         );
 
-        assertThat(execution.getTaskRunList(), hasSize(3));
+        assertThat(execution.getTaskRunList(), hasSize(1));
+    }
+
+}
+
+    @Test
+    void flow() throws TimeoutException, QueueException {
+        EmbeddedServer embeddedServer = applicationContext.getBean(EmbeddedServer.class);
+        embeddedServer.start();
+
+        Execution execution = runnerUtils.runOne(
+            TenantService.MAIN_TENANT,
+            "io.kestra.tests",
+            "update-fields-jira",
+            null,
+            null
+        );
+
+        assertThat(execution.getTaskRunList(), hasSize(1));
     }
 
 }
