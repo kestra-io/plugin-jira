@@ -17,7 +17,7 @@ import java.util.Map;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 
 @KestraTest
-@WireMockTest(httpPort = 8081)
+@WireMockTest(httpPort = 5083)
 class CreateCommentTest {
 
     @Inject
