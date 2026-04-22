@@ -43,21 +43,21 @@ public abstract class JiraClient extends Task implements RunnableTask<VoidOutput
         title = "Jira username or email",
         description = "Used with `password` for Basic/API token authentication; ignored when an `accessToken` is provided."
     )
-    @PluginProperty(group = "connection")
+    @PluginProperty(secret = true, group = "connection")
     protected Property<String> username;
 
     @Schema(
         title = "Jira password or API token",
         description = "Used with `username` for Basic/API token authentication; ignored when an `accessToken` is provided."
     )
-    @PluginProperty(group = "connection")
+    @PluginProperty(group = "connection", secret = true)
     protected Property<String> password;
 
     @Schema(
         title = "Jira OAuth access token",
         description = "Bearer token for OAuth; used only when `username`/`password` are not both set."
     )
-    @PluginProperty(group = "connection")
+    @PluginProperty(group = "connection", secret = true)
     protected Property<String> accessToken;
 
     @Schema(
