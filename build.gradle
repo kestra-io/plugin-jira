@@ -130,6 +130,7 @@ dependencies {
 
 test {
     jvmArgs = [ "-javaagent:${configurations.agent.singleFile}" ]
+    forkEvery = 1
 }
 
 /**********************************************************************************************************************\
