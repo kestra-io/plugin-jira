@@ -25,7 +25,7 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 @SuperBuilder
-@ToString(exclude = {"username", "password", "accessToken"})
+@ToString
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
