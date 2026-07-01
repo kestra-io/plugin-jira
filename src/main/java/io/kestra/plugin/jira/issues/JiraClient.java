@@ -44,6 +44,7 @@ public abstract class JiraClient extends Task implements RunnableTask<VoidOutput
         description = "Used with `password` for Basic/API token authentication; ignored when an `accessToken` is provided."
     )
     @PluginProperty(secret = true, group = "connection")
+    @ToString.Exclude
     protected Property<String> username;
 
     @Schema(
@@ -51,6 +52,7 @@ public abstract class JiraClient extends Task implements RunnableTask<VoidOutput
         description = "Used with `username` for Basic/API token authentication; ignored when an `accessToken` is provided."
     )
     @PluginProperty(group = "connection", secret = true)
+    @ToString.Exclude
     protected Property<String> password;
 
     @Schema(
@@ -58,6 +60,7 @@ public abstract class JiraClient extends Task implements RunnableTask<VoidOutput
         description = "Bearer token for OAuth; used only when `username`/`password` are not both set."
     )
     @PluginProperty(group = "connection", secret = true)
+    @ToString.Exclude
     protected Property<String> accessToken;
 
     @Schema(
@@ -78,7 +81,7 @@ public abstract class JiraClient extends Task implements RunnableTask<VoidOutput
 
             HttpResponse<String> response = client.request(request, String.class);
 
-            runContext.logger().debug("Response: {}", response.getBody());
+            runContext.logger().debug("Response status: {}", response.getStatus());
 
             return null;
         }
@@ -90,7 +93,7 @@ public abstract class JiraClient extends Task implements RunnableTask<VoidOutput
         String baseUrlRendered = runContext.render(this.baseUrl);
         String payloadRendered = runContext.render(this.payload).as(String.class).orElse(null);
 
-        runContext.logger().debug("Executing request with payload: {}", payloadRendered);
+        runContext.logger().debug("Executing request to '{}'", baseUrlRendered);
 
         var renderedUsername = runContext.render(this.username).as(String.class);
         var renderedPassword = runContext.render(this.password).as(String.class);
