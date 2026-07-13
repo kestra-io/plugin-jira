@@ -1,0 +1,15 @@
+# How to use the Jira plugin
+
+Create issues, add comments, and update fields in Jira from Kestra flows.
+
+## Authentication
+
+Set `baseUrl` to your Jira instance URL (e.g. `https://your-domain.atlassian.net`) on each task. For API token auth, set `username` (your email) and `password` (your Atlassian API token). For OAuth 2.0, set `accessToken` — when present it takes precedence over `username`/`password`. Store credentials in [secrets](https://kestra.io/docs/concepts/secret) and apply them globally with [plugin defaults](https://kestra.io/docs/workflow-components/plugin-defaults).
+
+## Tasks
+
+`issues.Create` creates a new Jira issue — set `projectKey`, `summary`, and optionally `description`, `labels`, and `issueTypeId`.
+
+`issues.CreateComment` adds a comment to an existing issue — set `issueIdOrKey` to the issue key or ID and `body` to the comment text.
+
+`issues.UpdateFields` updates one or more fields on an existing issue — set `issueIdOrKey` and pass a `fields` map of field names to new values.
