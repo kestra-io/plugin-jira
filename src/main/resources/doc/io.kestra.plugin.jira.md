@@ -4,7 +4,7 @@ Create issues, add comments, and update fields in Jira from Kestra flows.
 
 ## Authentication
 
-Set `baseUrl` to your Jira instance URL (e.g. `https://your-domain.atlassian.net`) on each task. For API token auth, set `username` (your email) and `password` (your Atlassian API token). For OAuth 2.0, set `accessToken` — when present it takes precedence over `username`/`password`. Store credentials in [secrets](https://kestra.io/docs/concepts/secret) and apply them globally with [plugin defaults](https://kestra.io/docs/workflow-components/plugin-defaults).
+Set `baseUrl` to your Jira instance URL (e.g. `https://your-domain.atlassian.net`) on each task. For API token auth, set `username` (your email) and `password` (your Atlassian API token). For OAuth 2.0, set `accessToken` — when present it takes precedence over `username`/`password`. Store credentials in [secrets](https://kestra.io/docs/concepts/secret) and set them on each task.
 
 ## Tasks
 
