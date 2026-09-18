@@ -3,6 +3,7 @@ package io.kestra.plugin.jira.issues;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.property.Property;
+import io.kestra.core.models.tasks.TicketingTaskInterface;
 import io.kestra.core.models.tasks.VoidOutput;
 import io.kestra.core.runners.RunContext;
 
@@ -68,7 +69,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
         )
     }
 )
-public class Create extends JiraTemplate {
+public class Create extends JiraTemplate implements TicketingTaskInterface {
     @Override
     public VoidOutput run(RunContext runContext) throws Exception {
         this.templateUri = Property.ofValue("jira-template.peb");
