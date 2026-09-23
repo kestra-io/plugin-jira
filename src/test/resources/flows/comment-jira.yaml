@@ -1,0 +1,16 @@
+id: comment-jira
+namespace: io.kestra.tests
+
+inputs:
+  - id: url
+    type: STRING
+
+tasks:
+  - id: create_comment
+    type: io.kestra.plugin.jira.issues.CreateComment
+    baseUrl: "{{ inputs.url }}"
+    username: your_email@example.com
+    password: your_jira_api_token
+    projectKey: myproject
+    issueIdOrKey: issuekey
+    body: "{{ execution.id }} has failed on {{ taskrun.startDate }}"

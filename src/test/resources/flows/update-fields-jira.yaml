@@ -1,0 +1,18 @@
+id: update-fields-jira
+namespace: io.kestra.tests
+
+inputs:
+  - id: url
+    type: STRING
+
+tasks:
+  - id: update_fields
+    type: io.kestra.plugin.jira.issues.UpdateFields
+    baseUrl: "{{ inputs.url }}"
+    username: your_email@example.com
+    password: your_jira_api_token
+    projectKey: myproject
+    issueIdOrKey: issuekey
+    fields:
+      description: "Changed description"
+      summary: "Changed summary"

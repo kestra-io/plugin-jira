@@ -1,0 +1,29 @@
+id: jira
+namespace: io.kestra.tests
+
+inputs:
+  - id: url
+    type: STRING
+
+tasks:
+  - id: create_issue
+    type: io.kestra.plugin.jira.issues.Create
+    baseUrl: "{{ inputs.url }}"
+    username: your_email@example.com
+    password: your_jira_api_token
+    projectKey: myproject
+    issueTypeId: "10003"
+    summary: "{{ execution.id }} has failed on {{ taskrun.startDate }}"
+    description: "See the link below for more details"
+    labels:
+      - bug
+      - workflow
+
+  - id: create_comment
+    type: io.kestra.plugin.jira.issues.CreateComment
+    baseUrl: "{{ inputs.url }}"
+    username: your_email@example.com
+    password: your_jira_api_token
+    projectKey: myproject
+    issueIdOrKey: "{{ outputs.create_issue.key }}"
+    body: "{{ execution.id }} has failed on {{ taskrun.startDate }}"
