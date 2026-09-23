@@ -7,7 +7,6 @@ import java.util.Objects;
 import org.apache.commons.io.IOUtils;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.core.JsonProcessingException;
 
 import io.kestra.core.http.HttpResponse;
 import io.kestra.core.models.annotations.Example;
@@ -127,12 +126,8 @@ public class CreateComment extends JiraTemplate implements RunnableTask<CreateCo
 
         HttpResponse<String> response = this.execute(runContext, "POST", uri, JacksonMapper.ofJson().writeValueAsString(mainMap));
 
-        CreatedComment createdComment = parseResponse(runContext, response);
-        if (createdComment.id() == null) {
-            throw new IllegalStateException(
-                "Jira returned HTTP " + response.getStatus().getCode() + " without a comment id; response: " + JiraUtil.truncate(response.getBody())
-            );
-        }
+        CreatedComment createdComment = JiraUtil.parseJsonResponse(runContext, response, CreatedComment.class, new CreatedComment(null, null));
+        JiraUtil.requireField(response, createdComment.id(), "a comment id");
 
         return Output.builder()
             .id(createdComment.id())
@@ -140,21 +135,6 @@ public class CreateComment extends JiraTemplate implements RunnableTask<CreateCo
             .self(createdComment.self())
             .url(rBrowseRoot + BROWSE_ROUTE + rIssueIdOrKey + "?focusedCommentId=" + createdComment.id())
             .build();
-    }
-
-    private static CreatedComment parseResponse(RunContext runContext, HttpResponse<String> response) {
-        String responseBody = response.getBody();
-        if (responseBody == null || responseBody.isBlank()) {
-            runContext.logger().debug("Jira returned an empty body for the create-comment response (status {})", response.getStatus());
-            return new CreatedComment(null, null);
-        }
-
-        try {
-            return JacksonMapper.ofJson().readValue(responseBody, CreatedComment.class);
-        } catch (JsonProcessingException e) {
-            runContext.logger().debug("Could not parse the Jira create-comment response body: {}", e.getMessage());
-            return new CreatedComment(null, null);
-        }
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

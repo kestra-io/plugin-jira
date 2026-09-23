@@ -1,7 +1,6 @@
 package io.kestra.plugin.jira.issues;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.core.JsonProcessingException;
 
 import io.kestra.core.http.HttpResponse;
 import io.kestra.core.models.annotations.Example;
@@ -9,7 +8,6 @@ import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
-import io.kestra.core.serializers.JacksonMapper;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.*;
@@ -82,12 +80,8 @@ public class Create extends JiraTemplate implements RunnableTask<Create.Output> 
         String rBrowseRoot = this.browseRoot(runContext);
         HttpResponse<String> response = this.sendTemplated(runContext, "POST", rBrowseRoot + ISSUE_API_ROUTE);
 
-        CreatedIssue createdIssue = parseResponse(runContext, response);
-        if (createdIssue.key() == null) {
-            throw new IllegalStateException(
-                "Jira returned HTTP " + response.getStatus().getCode() + " without an issue key; response: " + JiraUtil.truncate(response.getBody())
-            );
-        }
+        CreatedIssue createdIssue = JiraUtil.parseJsonResponse(runContext, response, CreatedIssue.class, new CreatedIssue(null, null, null));
+        JiraUtil.requireField(response, createdIssue.key(), "an issue key");
 
         return Output.builder()
             .id(createdIssue.id())
@@ -95,21 +89,6 @@ public class Create extends JiraTemplate implements RunnableTask<Create.Output> 
             .self(createdIssue.self())
             .url(rBrowseRoot + BROWSE_ROUTE + createdIssue.key())
             .build();
-    }
-
-    private static CreatedIssue parseResponse(RunContext runContext, HttpResponse<String> response) {
-        String body = response.getBody();
-        if (body == null || body.isBlank()) {
-            runContext.logger().debug("Jira returned an empty body for the create-issue response (status {})", response.getStatus());
-            return new CreatedIssue(null, null, null);
-        }
-
-        try {
-            return JacksonMapper.ofJson().readValue(body, CreatedIssue.class);
-        } catch (JsonProcessingException e) {
-            runContext.logger().debug("Could not parse the Jira create-issue response body: {}", e.getMessage());
-            return new CreatedIssue(null, null, null);
-        }
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
