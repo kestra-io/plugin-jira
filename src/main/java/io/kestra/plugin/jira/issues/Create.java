@@ -80,7 +80,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
         )
     }
 )
-public class Create extends JiraTemplate implements RunnableTask<Create.Output> {
+public class Create extends JiraClient implements RunnableTask<Create.Output> {
 
     @Schema(
         title = "Project key",

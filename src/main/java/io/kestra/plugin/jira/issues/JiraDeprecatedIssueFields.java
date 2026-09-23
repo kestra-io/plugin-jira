@@ -11,7 +11,7 @@ import lombok.experimental.SuperBuilder;
 
 /**
  * Holds the issue-content fields that {@link CreateComment} and {@link UpdateFields} used to
- * inherit from {@link JiraTemplate} before they were scoped down to {@link Create}. Kept here,
+ * inherit from the common task hierarchy before they were scoped down to {@link Create}. Kept here,
  * deprecated and ignored at runtime, so that existing flow YAML setting them on these two tasks
  * keeps deserializing and running exactly as before. {@link Create} does not extend this class:
  * it declares its own, still-active copies of these fields.
@@ -21,7 +21,7 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode
 @Getter
 @NoArgsConstructor
-public abstract class JiraDeprecatedIssueFields extends JiraTemplate {
+public abstract class JiraDeprecatedIssueFields extends JiraClient {
 
     @Schema(
         title = "Project key",
