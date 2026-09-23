@@ -86,20 +86,21 @@ public class UpdateFields extends JiraTemplate implements RunnableTask<UpdateFie
     public Output run(RunContext runContext) throws Exception {
         this.templateUri = Property.ofValue("update-field-template.peb");
 
-        String rIssueIdOrKey = runContext.render(this.issueIdOrKey);
-        String rBrowseRoot = this.browseRoot(runContext);
-        String uri = rBrowseRoot + ISSUE_API_ROUTE + rIssueIdOrKey;
+        var rIssueIdOrKey = runContext.render(this.issueIdOrKey);
+        var encodedIssueIdOrKey = JiraUtil.encodePathSegment(rIssueIdOrKey);
+        var rBrowseRoot = this.browseRoot(runContext);
+        var uri = rBrowseRoot + ISSUE_API_ROUTE + encodedIssueIdOrKey;
 
-        String templateUri = runContext.render(this.templateUri)
+        var templateUri = runContext.render(this.templateUri)
             .as(String.class)
             .orElseThrow(() -> new IllegalArgumentException("Invalid templateUri: " + this.templateUri));
 
-        String template = IOUtils.toString(
+        var template = IOUtils.toString(
             Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(templateUri)),
             StandardCharsets.UTF_8
         );
 
-        String render = runContext.render(
+        var render = runContext.render(
             template, Map.of("fields", runContext.render(this.fields).asMap(String.class, Object.class))
         );
 
@@ -111,7 +112,7 @@ public class UpdateFields extends JiraTemplate implements RunnableTask<UpdateFie
 
         return Output.builder()
             .issueIdOrKey(rIssueIdOrKey)
-            .url(rBrowseRoot + BROWSE_ROUTE + rIssueIdOrKey)
+            .url(rBrowseRoot + BROWSE_ROUTE + encodedIssueIdOrKey)
             .build();
     }
 

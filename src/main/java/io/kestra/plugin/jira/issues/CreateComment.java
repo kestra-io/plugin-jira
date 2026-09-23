@@ -8,7 +8,6 @@ import org.apache.commons.io.IOUtils;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-import io.kestra.core.http.HttpResponse;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -19,7 +18,11 @@ import io.kestra.core.serializers.JacksonMapper;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
-import lombok.*;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 import static io.kestra.plugin.jira.issues.JiraUtil.BROWSE_ROUTE;
@@ -111,29 +114,30 @@ public class CreateComment extends JiraTemplate implements RunnableTask<CreateCo
     public Output run(RunContext runContext) throws Exception {
         this.templateUri = Property.ofValue("comment-jira-template.peb");
 
-        String rIssueIdOrKey = runContext.render(this.issueIdOrKey);
-        String rBrowseRoot = this.browseRoot(runContext);
-        String uri = rBrowseRoot + ISSUE_API_ROUTE + rIssueIdOrKey + COMMENT_API_ROUTE;
+        var rIssueIdOrKey = runContext.render(this.issueIdOrKey);
+        var encodedIssueIdOrKey = JiraUtil.encodePathSegment(rIssueIdOrKey);
+        var rBrowseRoot = this.browseRoot(runContext);
+        var uri = rBrowseRoot + ISSUE_API_ROUTE + encodedIssueIdOrKey + COMMENT_API_ROUTE;
 
-        String template = IOUtils.toString(
+        var template = IOUtils.toString(
             Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(runContext.render(this.templateUri).as(String.class).orElse(null))),
             StandardCharsets.UTF_8
         );
 
-        String render = runContext.render(template, Map.of("body", runContext.render(body)));
+        var render = runContext.render(template, Map.of("body", runContext.render(body)));
 
-        Map<String, Object> mainMap = (Map<String, Object>) JacksonMapper.ofJson().readValue(render, Object.class);
+        var mainMap = (Map<String, Object>) JacksonMapper.ofJson().readValue(render, Object.class);
 
-        HttpResponse<String> response = this.execute(runContext, "POST", uri, JacksonMapper.ofJson().writeValueAsString(mainMap));
+        var response = this.execute(runContext, "POST", uri, JacksonMapper.ofJson().writeValueAsString(mainMap));
 
-        CreatedComment createdComment = JiraUtil.parseJsonResponse(runContext, response, CreatedComment.class, new CreatedComment(null, null));
+        var createdComment = JiraUtil.parseJsonResponse(runContext, response, CreatedComment.class, new CreatedComment(null, null));
         JiraUtil.requireField(response, createdComment.id(), "a comment id");
 
         return Output.builder()
             .id(createdComment.id())
             .issueIdOrKey(rIssueIdOrKey)
             .self(createdComment.self())
-            .url(rBrowseRoot + BROWSE_ROUTE + rIssueIdOrKey + "?focusedCommentId=" + createdComment.id())
+            .url(rBrowseRoot + BROWSE_ROUTE + encodedIssueIdOrKey + "?focusedCommentId=" + createdComment.id())
             .build();
     }
 

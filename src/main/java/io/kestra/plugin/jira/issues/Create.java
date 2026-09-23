@@ -2,7 +2,6 @@ package io.kestra.plugin.jira.issues;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-import io.kestra.core.http.HttpResponse;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.tasks.RunnableTask;
@@ -74,17 +73,17 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
 public class Create extends JiraTemplate implements RunnableTask<Create.Output> {
     @Override
     public Output run(RunContext runContext) throws Exception {
-        String rBrowseRoot = this.browseRoot(runContext);
-        HttpResponse<String> response = this.sendTemplated(runContext, "POST", rBrowseRoot + ISSUE_API_ROUTE);
+        var rBrowseRoot = this.browseRoot(runContext);
+        var response = this.sendTemplated(runContext, "POST", rBrowseRoot + ISSUE_API_ROUTE);
 
-        CreatedIssue createdIssue = JiraUtil.parseJsonResponse(runContext, response, CreatedIssue.class, new CreatedIssue(null, null, null));
+        var createdIssue = JiraUtil.parseJsonResponse(runContext, response, CreatedIssue.class, new CreatedIssue(null, null, null));
         JiraUtil.requireField(response, createdIssue.key(), "an issue key");
 
         return Output.builder()
             .id(createdIssue.id())
             .key(createdIssue.key())
             .self(createdIssue.self())
-            .url(rBrowseRoot + BROWSE_ROUTE + createdIssue.key())
+            .url(rBrowseRoot + BROWSE_ROUTE + JiraUtil.encodePathSegment(createdIssue.key()))
             .build();
     }
 

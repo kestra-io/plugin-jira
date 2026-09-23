@@ -68,4 +68,25 @@ class UpdateFieldsTest extends AbstractJiraTest {
         assertThat(mockController.requests.getFirst().path(), is("/jira/rest/api/2/issue/TEST-1"));
         assertThat(mockController.requests.getFirst().method(), is("PUT"));
     }
+
+    @Test
+    void encodesIssueIdOrKeyPathSegment() throws Exception {
+        UpdateFields task = UpdateFields.builder()
+            .id(IdUtils.create())
+            .type(UpdateFields.class.getName())
+            .baseUrl(getApiBaseUrl())
+            .username(Property.ofValue("user@example.com"))
+            .password(Property.ofValue("token"))
+            .projectKey("PROJ")
+            .issueIdOrKey("OPS 123")
+            .fields(Property.ofValue(Map.of("summary", "Updated summary")))
+            .build();
+
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        UpdateFields.Output output = task.run(runContext);
+
+        assertThat(output.getIssueIdOrKey(), is("OPS 123"));
+        assertThat(output.getUrl(), is(getApiBaseUrl() + "/browse/OPS%20123"));
+        assertThat(mockController.requests.getFirst().path(), is("/rest/api/2/issue/OPS%20123"));
+    }
 }

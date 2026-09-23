@@ -16,6 +16,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class CreateCommentTest extends AbstractJiraTest {
 
@@ -68,5 +69,45 @@ class CreateCommentTest extends AbstractJiraTest {
 
         assertThat(output.getUrl(), is(getApiBaseUrl() + "/jira/browse/TEST-1?focusedCommentId=20000"));
         assertThat(mockController.requests.getFirst().path(), is("/jira/rest/api/2/issue/TEST-1/comment"));
+    }
+
+    @Test
+    void failsWithClearMessageWhenCommentIdMissingFrom2xxResponse() {
+        CreateComment task = CreateComment.builder()
+            .id(IdUtils.create())
+            .type(CreateComment.class.getName())
+            .baseUrl(getApiBaseUrl() + "/missing-key")
+            .username(Property.ofValue("user@example.com"))
+            .password(Property.ofValue("token"))
+            .projectKey("PROJ")
+            .issueIdOrKey("TEST-1")
+            .body("Comment body")
+            .build();
+
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> task.run(runContext));
+        assertThat(exception.getMessage(), containsString("Jira returned HTTP 201 without a comment id"));
+    }
+
+    @Test
+    void encodesIssueIdOrKeyPathSegment() throws Exception {
+        CreateComment task = CreateComment.builder()
+            .id(IdUtils.create())
+            .type(CreateComment.class.getName())
+            .baseUrl(getApiBaseUrl())
+            .username(Property.ofValue("user@example.com"))
+            .password(Property.ofValue("token"))
+            .projectKey("PROJ")
+            .issueIdOrKey("OPS 123")
+            .body("Comment body")
+            .build();
+
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        CreateComment.Output output = task.run(runContext);
+
+        assertThat(output.getIssueIdOrKey(), is("OPS 123"));
+        assertThat(output.getUrl(), is(getApiBaseUrl() + "/browse/OPS%20123?focusedCommentId=20000"));
+        assertThat(mockController.requests.getFirst().path(), is("/rest/api/2/issue/OPS%20123/comment"));
     }
 }

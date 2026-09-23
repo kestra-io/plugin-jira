@@ -32,13 +32,38 @@ public class JiraMockController {
     private static final String CREATE_COMMENT_RESPONSE = """
         {"id":"20000","self":"http://mock-jira/rest/api/2/issue/TEST-1/comment/20000","created":"2024-01-01T00:00:00.000+0000"}""";
 
+    private static final String MISSING_ISSUE_KEY_RESPONSE = """
+        {"self":"http://mock-jira/rest/api/2/issue/10000"}""";
+
+    private static final String MISSING_COMMENT_ID_RESPONSE = """
+        {"self":"http://mock-jira/rest/api/2/issue/TEST-1/comment/20000"}""";
+
+    /**
+     * A 2xx response body is picked based on a marker path segment the test embeds in {@code baseUrl}
+     * (e.g. {@code getApiBaseUrl() + "/missing-key"}), since the real request path is otherwise fixed
+     * by the task under test.
+     */
     @Post(uri = "/{+path}", produces = MediaType.APPLICATION_JSON)
     public HttpResponse<String> post(HttpRequest<?> request, String path, @Body String body) {
         capture(request, body);
 
-        return request.getPath().endsWith("/comment")
-            ? HttpResponse.created(CREATE_COMMENT_RESPONSE)
-            : HttpResponse.created(CREATE_ISSUE_RESPONSE);
+        String requestPath = request.getPath();
+        boolean isComment = requestPath.endsWith("/comment");
+
+        if (requestPath.contains("/http-error/")) {
+            return HttpResponse.badRequest("{\"errorMessages\":[\"" + "x".repeat(600) + "\"]}");
+        }
+        if (requestPath.contains("/empty-body/")) {
+            return HttpResponse.created("");
+        }
+        if (requestPath.contains("/bad-json/")) {
+            return HttpResponse.created("not-json");
+        }
+        if (requestPath.contains("/missing-key/")) {
+            return isComment ? HttpResponse.created(MISSING_COMMENT_ID_RESPONSE) : HttpResponse.created(MISSING_ISSUE_KEY_RESPONSE);
+        }
+
+        return isComment ? HttpResponse.created(CREATE_COMMENT_RESPONSE) : HttpResponse.created(CREATE_ISSUE_RESPONSE);
     }
 
     @Put(uri = "/{+path}")

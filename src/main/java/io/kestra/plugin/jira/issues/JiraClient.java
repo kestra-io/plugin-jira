@@ -10,6 +10,7 @@ import io.kestra.core.http.HttpRequest;
 import io.kestra.core.http.HttpResponse;
 import io.kestra.core.http.client.HttpClient;
 import io.kestra.core.http.client.HttpClientException;
+import io.kestra.core.http.client.HttpClientResponseException;
 import io.kestra.core.http.client.configurations.HttpConfiguration;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
@@ -91,6 +92,18 @@ public abstract class JiraClient extends Task {
             runContext.logger().debug("Response status: {}", response.getStatus());
 
             return response;
+        } catch (HttpClientResponseException e) {
+            HttpResponse<?> failedResponse = e.getResponse();
+            if (failedResponse == null) {
+                throw e;
+            }
+
+            int statusCode = failedResponse.getStatus() != null ? failedResponse.getStatus().getCode() : -1;
+            throw new HttpClientResponseException(
+                "Jira request failed with HTTP " + statusCode + "; response: " + JiraUtil.truncate(JiraUtil.bodyAsString(failedResponse)),
+                failedResponse,
+                e
+            );
         }
     }
 

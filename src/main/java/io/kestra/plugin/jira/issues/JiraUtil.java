@@ -1,5 +1,8 @@
 package io.kestra.plugin.jira.issues;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 import io.kestra.core.http.HttpResponse;
@@ -48,6 +51,19 @@ public class JiraUtil {
     }
 
     /**
+     * Reads a failed response's body as a {@code String} regardless of the raw type Kestra's HTTP
+     * client captured it as (typically {@code byte[]} for a non-2xx response).
+     */
+    public static String bodyAsString(HttpResponse<?> response) {
+        if (response == null || response.getBody() == null) {
+            return null;
+        }
+
+        Object body = response.getBody();
+        return body instanceof byte[] bytes ? new String(bytes, StandardCharsets.UTF_8) : body.toString();
+    }
+
+    /**
      * Truncates a Jira response body before it's embedded in an exception message, so a large error
      * payload never balloons the flow's execution log.
      */
@@ -56,5 +72,14 @@ public class JiraUtil {
             return "";
         }
         return value.length() > MAX_ERROR_BODY_LENGTH ? value.substring(0, MAX_ERROR_BODY_LENGTH) + "..." : value;
+    }
+
+    /**
+     * Encodes a rendered value (an issue key, id, or comment id) for safe use as a single URL path
+     * segment. Plain keys such as {@code PROJ-123} are returned unchanged; spaces become {@code %20}
+     * rather than form-encoding's {@code +}, which would be invalid in a path.
+     */
+    public static String encodePathSegment(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
     }
 }

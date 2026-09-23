@@ -79,23 +79,23 @@ public abstract class JiraTemplate extends JiraClient {
             return this.execute(runContext, method, uri, renderedPayload.get());
         }
 
-        Map<String, Object> fields = new LinkedHashMap<>();
+        var fields = new LinkedHashMap<String, Object>();
         fields.put("project", Map.of("key", runContext.render(this.projectKey)));
 
         runContext.render(this.summary).as(String.class).ifPresent(s -> fields.put("summary", s));
 
-        String rDescription = runContext.render(this.description);
+        var rDescription = runContext.render(this.description);
         if (rDescription != null && !rDescription.isBlank()) {
             fields.put("description", rDescription);
         }
 
         runContext.render(this.issueTypeId).as(String.class).ifPresent(id -> fields.put("issuetype", Map.of("id", id)));
 
-        List<String> labels = new ArrayList<>(List.of("kestra-bot"));
+        var labels = new ArrayList<>(List.of("kestra-bot"));
         labels.addAll(runContext.render(this.labels).asList(String.class));
         fields.put("labels", labels);
 
-        String payloadRendered = JacksonMapper.ofJson().writeValueAsString(Map.of("fields", fields));
+        var payloadRendered = JacksonMapper.ofJson().writeValueAsString(Map.of("fields", fields));
         return this.execute(runContext, method, uri, payloadRendered);
     }
 }
