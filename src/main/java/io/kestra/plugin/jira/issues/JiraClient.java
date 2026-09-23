@@ -79,26 +79,26 @@ public abstract class JiraClient extends Task {
      * prefix and as the browse-URL root, without ever mutating the {@code baseUrl} field itself.
      */
     protected String browseRoot(RunContext runContext) throws IllegalVariableEvaluationException {
-        String rBaseUrl = runContext.render(this.baseUrl);
+        var rBaseUrl = runContext.render(this.baseUrl);
         return rBaseUrl.endsWith("/") ? rBaseUrl.substring(0, rBaseUrl.length() - 1) : rBaseUrl;
     }
 
     protected HttpResponse<String> execute(RunContext runContext, String method, String uri, String payload) throws IllegalVariableEvaluationException, HttpClientException, IOException {
-        try (HttpClient client = new HttpClient(runContext, this.options)) {
-            HttpRequest request = authorizedRequest(runContext, method, uri, payload);
+        try (var client = new HttpClient(runContext, this.options)) {
+            var request = authorizedRequest(runContext, method, uri, payload);
 
-            HttpResponse<String> response = client.request(request, String.class);
+            var response = client.request(request, String.class);
 
             runContext.logger().debug("Response status: {}", response.getStatus());
 
             return response;
         } catch (HttpClientResponseException e) {
-            HttpResponse<?> failedResponse = e.getResponse();
+            var failedResponse = e.getResponse();
             if (failedResponse == null) {
                 throw e;
             }
 
-            int statusCode = failedResponse.getStatus() != null ? failedResponse.getStatus().getCode() : -1;
+            var statusCode = failedResponse.getStatus() != null ? failedResponse.getStatus().getCode() : -1;
             throw new HttpClientResponseException(
                 "Jira request failed with HTTP " + statusCode + "; response: " + JiraUtil.truncate(JiraUtil.bodyAsString(failedResponse)),
                 failedResponse,
@@ -113,7 +113,7 @@ public abstract class JiraClient extends Task {
         var renderedUsername = runContext.render(this.username).as(String.class);
         var renderedPassword = runContext.render(this.password).as(String.class);
 
-        HttpRequest.HttpRequestBuilder request = HttpRequest.builder()
+        var request = HttpRequest.builder()
             .uri(URI.create(uri))
             .method(method)
             .body(HttpRequest.StringRequestBody.builder().content(payload).build())
