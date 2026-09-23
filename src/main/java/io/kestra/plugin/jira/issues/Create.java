@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.kestra.core.http.HttpResponse;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
-import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 
@@ -23,7 +22,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
 @NoArgsConstructor
 @Schema(
     title = "Create a Jira issue",
-    description = "Builds a JSON payload from `jira-template.peb` and posts to `/rest/api/2/issue/`. Renders project, summary, description, labels, and issue type with flow variables; template always adds a `kestra-bot` label."
+    description = "Builds a JSON payload from the rendered project, summary, description, labels, and issue type, then posts it to `/rest/api/2/issue/`. `summary` and `description` are optional and omitted from the payload when not set; a `kestra-bot` label is always included."
 )
 @Plugin(
     examples = {
@@ -75,8 +74,6 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
 public class Create extends JiraTemplate implements RunnableTask<Create.Output> {
     @Override
     public Output run(RunContext runContext) throws Exception {
-        this.templateUri = Property.ofValue("jira-template.peb");
-
         String rBrowseRoot = this.browseRoot(runContext);
         HttpResponse<String> response = this.sendTemplated(runContext, "POST", rBrowseRoot + ISSUE_API_ROUTE);
 
