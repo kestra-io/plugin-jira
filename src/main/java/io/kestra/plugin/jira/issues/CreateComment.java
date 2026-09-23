@@ -6,22 +6,24 @@ import java.util.Objects;
 
 import org.apache.commons.io.IOUtils;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.core.JsonProcessingException;
+
+import io.kestra.core.http.HttpResponse;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
-import io.kestra.core.models.tasks.VoidOutput;
+import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import static io.kestra.plugin.jira.issues.JiraUtil.BROWSE_ROUTE;
 import static io.kestra.plugin.jira.issues.JiraUtil.COMMENT_API_ROUTE;
 import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
 
@@ -53,10 +55,42 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
                     issueIdOrKey: "TID-53"
                     body: "This ticket is not moving, do we need to outsource this!"
                 """
+        ),
+        @Example(
+            title = "Create a Jira issue, then comment on it in the same flow using its output key.",
+            full = true,
+            code = """
+                id: jira_flow
+                namespace: company.myteam
+
+                tasks:
+                  - id: create_issue
+                    type: io.kestra.plugin.jira.issues.Create
+                    baseUrl: https://your-domain.atlassian.net
+                    username: your_email@example.com
+                    password: "{{ secret('JIRA_API_TOKEN') }}"
+                    projectKey: myproject
+                    summary: "Workflow failed"
+                    description: "{{ execution.id }} has failed on {{ taskrun.startDate }}"
+                    issueTypeId: "10001"
+
+                  - id: log_issue_url
+                    type: io.kestra.plugin.core.log.Log
+                    message: "Created {{ outputs.create_issue.key }} — {{ outputs.create_issue.url }}"
+
+                  - id: create_comment_on_a_ticket
+                    type: io.kestra.plugin.jira.issues.CreateComment
+                    baseUrl: https://your-domain.atlassian.net
+                    username: your_email@example.com
+                    password: "{{ secret('JIRA_API_TOKEN') }}"
+                    projectKey: myproject
+                    issueIdOrKey: "{{ outputs.create_issue.key }}"
+                    body: "Linked automatically from the same flow run."
+                """
         )
     }
 )
-public class CreateComment extends JiraTemplate {
+public class CreateComment extends JiraTemplate implements RunnableTask<CreateComment.Output> {
     @Schema(
         title = "Issue key or id to comment",
         description = "Rendered value appended to `/rest/api/2/issue/` before `/comment`."
@@ -75,9 +109,12 @@ public class CreateComment extends JiraTemplate {
 
     @SuppressWarnings("unchecked")
     @Override
-    public VoidOutput run(RunContext runContext) throws Exception {
+    public Output run(RunContext runContext) throws Exception {
         this.templateUri = Property.ofValue("comment-jira-template.peb");
-        this.baseUrl += ISSUE_API_ROUTE + runContext.render(this.issueIdOrKey) + COMMENT_API_ROUTE;
+
+        String rIssueIdOrKey = runContext.render(this.issueIdOrKey);
+        String rBrowseRoot = this.browseRoot(runContext);
+        String uri = rBrowseRoot + ISSUE_API_ROUTE + rIssueIdOrKey + COMMENT_API_ROUTE;
 
         String template = IOUtils.toString(
             Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(runContext.render(this.templateUri).as(String.class).orElse(null))),
@@ -88,7 +125,57 @@ public class CreateComment extends JiraTemplate {
 
         Map<String, Object> mainMap = (Map<String, Object>) JacksonMapper.ofJson().readValue(render, Object.class);
 
-        this.payload = Property.ofValue(JacksonMapper.ofJson().writeValueAsString(mainMap));
-        return super.run(runContext);
+        HttpResponse<String> response = this.execute(runContext, "POST", uri, JacksonMapper.ofJson().writeValueAsString(mainMap));
+
+        CreatedComment createdComment = parseResponse(runContext, response);
+        if (createdComment.id() == null) {
+            throw new IllegalStateException(
+                "Jira returned HTTP " + response.getStatus().getCode() + " without a comment id; response: " + JiraUtil.truncate(response.getBody())
+            );
+        }
+
+        return Output.builder()
+            .id(createdComment.id())
+            .issueIdOrKey(rIssueIdOrKey)
+            .self(createdComment.self())
+            .url(rBrowseRoot + BROWSE_ROUTE + rIssueIdOrKey + "?focusedCommentId=" + createdComment.id())
+            .build();
+    }
+
+    private static CreatedComment parseResponse(RunContext runContext, HttpResponse<String> response) {
+        String responseBody = response.getBody();
+        if (responseBody == null || responseBody.isBlank()) {
+            runContext.logger().debug("Jira returned an empty body for the create-comment response (status {})", response.getStatus());
+            return new CreatedComment(null, null);
+        }
+
+        try {
+            return JacksonMapper.ofJson().readValue(responseBody, CreatedComment.class);
+        } catch (JsonProcessingException e) {
+            runContext.logger().debug("Could not parse the Jira create-comment response body: {}", e.getMessage());
+            return new CreatedComment(null, null);
+        }
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record CreatedComment(String id, String self) {
+    }
+
+    @Builder
+    @Getter
+    public static class Output implements io.kestra.core.models.tasks.Output {
+        @Schema(title = "Created comment ID", description = "Jira's internal identifier for the created comment.")
+        private final String id;
+
+        @Schema(title = "Commented issue key or id", description = "The rendered `issueIdOrKey` the comment was added to.")
+        private final String issueIdOrKey;
+
+        @Schema(
+            title = "Comment browse URL", description = "Link to the issue in the Jira web UI with the new comment focused, built as `{baseUrl}/browse/{issueIdOrKey}?focusedCommentId={id}`."
+        )
+        private final String url;
+
+        @Schema(title = "Comment REST link", description = "Jira's `self` REST API link for the created comment.")
+        private final String self;
     }
 }

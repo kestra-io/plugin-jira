@@ -1,64 +1,72 @@
 package io.kestra.plugin.jira.issues;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.util.Objects;
-import java.util.concurrent.TimeoutException;
+import java.util.Map;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.google.common.collect.ImmutableMap;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.runners.RunContext;
+import io.kestra.core.runners.RunContextFactory;
+import io.kestra.core.utils.IdUtils;
+import io.kestra.core.utils.TestsUtils;
 
-import io.kestra.core.junit.annotations.KestraTest;
-import io.kestra.core.models.executions.Execution;
-import io.kestra.core.queues.QueueException;
-import io.kestra.core.repositories.LocalFlowRepositoryLoader;
-import io.kestra.core.runners.TestRunner;
-import io.kestra.core.runners.TestRunnerUtils;
-import io.kestra.core.tenant.TenantService;
-
-import io.micronaut.context.ApplicationContext;
-import io.micronaut.runtime.server.EmbeddedServer;
 import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 
-@KestraTest
-class CreateCommentTest {
-
-    @Inject
-    private ApplicationContext applicationContext;
+class CreateCommentTest extends AbstractJiraTest {
 
     @Inject
-    protected TestRunner runner;
+    private RunContextFactory runContextFactory;
 
-    @Inject
-    protected TestRunnerUtils runnerUtils;
+    @Test
+    void addsCommentAndExposesOutputs() throws Exception {
+        CreateComment task = CreateComment.builder()
+            .id(IdUtils.create())
+            .type(CreateComment.class.getName())
+            .baseUrl(getApiBaseUrl())
+            .username(Property.ofValue("user@example.com"))
+            .password(Property.ofValue("token"))
+            .projectKey("PROJ")
+            .issueIdOrKey("TEST-1")
+            .body("This ticket is not moving")
+            .build();
 
-    @Inject
-    protected LocalFlowRepositoryLoader repositoryLoader;
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        CreateComment.Output output = task.run(runContext);
 
-    @BeforeEach
-    void init() throws IOException, URISyntaxException {
-        repositoryLoader.load(Objects.requireNonNull(CreateCommentTest.class.getClassLoader().getResource("flows")));
-        this.runner.run();
+        assertThat(output.getId(), is("20000"));
+        assertThat(output.getIssueIdOrKey(), is("TEST-1"));
+        assertThat(output.getSelf(), is("http://mock-jira/rest/api/2/issue/TEST-1/comment/20000"));
+        assertThat(output.getUrl(), is(getApiBaseUrl() + "/browse/TEST-1?focusedCommentId=20000"));
+
+        assertThat(mockController.requests, hasSize(1));
+        JiraMockController.CapturedRequest request = mockController.requests.getFirst();
+        assertThat(request.method(), is("POST"));
+        assertThat(request.path(), is("/rest/api/2/issue/TEST-1/comment"));
+        assertThat(request.body(), containsString("This ticket is not moving"));
     }
 
     @Test
-    void flow() throws TimeoutException, QueueException {
-        EmbeddedServer embeddedServer = applicationContext.getBean(EmbeddedServer.class);
-        embeddedServer.start();
+    void supportsBaseUrlWithContextPathAndTrailingSlash() throws Exception {
+        CreateComment task = CreateComment.builder()
+            .id(IdUtils.create())
+            .type(CreateComment.class.getName())
+            .baseUrl(getApiBaseUrl() + "/jira/")
+            .username(Property.ofValue("user@example.com"))
+            .password(Property.ofValue("token"))
+            .projectKey("PROJ")
+            .issueIdOrKey("TEST-1")
+            .body("Comment via context path")
+            .build();
 
-        Execution execution = runnerUtils.runOne(
-            TenantService.MAIN_TENANT,
-            "io.kestra.tests",
-            "comment-jira",
-            null,
-            (f, e) -> ImmutableMap.of("url", embeddedServer.getURI().toString())
-        );
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        CreateComment.Output output = task.run(runContext);
 
-        assertThat(execution.getTaskRunList(), hasSize(3));
+        assertThat(output.getUrl(), is(getApiBaseUrl() + "/jira/browse/TEST-1?focusedCommentId=20000"));
+        assertThat(mockController.requests.getFirst().path(), is("/jira/rest/api/2/issue/TEST-1/comment"));
     }
 }

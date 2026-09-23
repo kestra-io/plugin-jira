@@ -5,9 +5,9 @@ import java.util.*;
 
 import org.apache.commons.io.IOUtils;
 
+import io.kestra.core.http.HttpResponse;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
-import io.kestra.core.models.tasks.VoidOutput;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
 
@@ -66,12 +66,15 @@ public abstract class JiraTemplate extends JiraClient {
     @PluginProperty(group = "advanced")
     protected Property<String> issueTypeId;
 
+    /**
+     * Builds the request body — either the explicit {@code payload} override, or the rendered
+     * {@code jira-template.peb} field map — and sends it to {@code uri}.
+     */
     @SuppressWarnings("unchecked")
-    @Override
-    public VoidOutput run(RunContext runContext) throws Exception {
+    protected HttpResponse<String> sendTemplated(RunContext runContext, String method, String uri) throws Exception {
         var renderedPayload = runContext.render(this.payload).as(String.class);
         if (renderedPayload.isPresent() && !renderedPayload.get().isBlank()) {
-            return super.run(runContext);
+            return this.execute(runContext, method, uri, renderedPayload.get());
         }
 
         Map<String, Object> mainMap = new HashMap<>();
@@ -96,9 +99,9 @@ public abstract class JiraTemplate extends JiraClient {
             );
             String render = runContext.render(template, renderedAttributesMap);
             mainMap = (Map<String, Object>) JacksonMapper.ofJson().readValue(render, Object.class);
-
         }
-        this.payload = Property.ofValue(JacksonMapper.ofJson().writeValueAsString(mainMap));
-        return super.run(runContext);
+
+        String payloadRendered = JacksonMapper.ofJson().writeValueAsString(mainMap);
+        return this.execute(runContext, method, uri, payloadRendered);
     }
 }

@@ -13,18 +13,22 @@ import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
-import io.kestra.core.models.tasks.VoidOutput;
+import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+
+import static io.kestra.plugin.jira.issues.JiraUtil.BROWSE_ROUTE;
+import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
 
 @SuperBuilder
 @ToString
@@ -33,7 +37,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @Schema(
     title = "Update fields on a Jira issue",
-    description = "Sends a POST to Jira's issue API to change selected fields. Renders `issueIdOrKey` and `fields` with flow variables, then serializes values via `update-field-template.peb` (nested objects are not supported). Requires Jira authentication (Basic or OAuth) configured on the task."
+    description = "Sends a PUT to Jira's issue API to change selected fields, per the Jira REST v2 `PUT /rest/api/2/issue/{issueIdOrKey}` edit-issue endpoint. Renders `issueIdOrKey` and `fields` with flow variables, then serializes values via `update-field-template.peb` (nested objects are not supported). Requires Jira authentication (Basic or OAuth) configured on the task."
 )
 @Plugin(
     examples = {
@@ -58,7 +62,7 @@ import lombok.experimental.SuperBuilder;
         )
     }
 )
-public class UpdateFields extends JiraTemplate {
+public class UpdateFields extends JiraTemplate implements RunnableTask<UpdateFields.Output> {
 
     private final static ObjectMapper mapper = JacksonMapper.ofJson();
 
@@ -79,9 +83,12 @@ public class UpdateFields extends JiraTemplate {
     private Property<Map<String, Object>> fields;
 
     @Override
-    public VoidOutput run(RunContext runContext) throws Exception {
+    public Output run(RunContext runContext) throws Exception {
         this.templateUri = Property.ofValue("update-field-template.peb");
-        this.baseUrl += JiraUtil.ISSUE_API_ROUTE + runContext.render(this.issueIdOrKey);
+
+        String rIssueIdOrKey = runContext.render(this.issueIdOrKey);
+        String rBrowseRoot = this.browseRoot(runContext);
+        String uri = rBrowseRoot + ISSUE_API_ROUTE + rIssueIdOrKey;
 
         String templateUri = runContext.render(this.templateUri)
             .as(String.class)
@@ -99,8 +106,22 @@ public class UpdateFields extends JiraTemplate {
         Map<String, Object> body = mapper.readValue(render, new TypeReference<>() {
         });
 
-        this.payload = Property.ofValue(mapper.writeValueAsString(body));
-        return super.run(runContext);
+        // Jira REST v2 only accepts PUT on /rest/api/2/issue/{issueIdOrKey} for editing an issue; POST is rejected.
+        this.execute(runContext, "PUT", uri, mapper.writeValueAsString(body));
+
+        return Output.builder()
+            .issueIdOrKey(rIssueIdOrKey)
+            .url(rBrowseRoot + BROWSE_ROUTE + rIssueIdOrKey)
+            .build();
     }
 
+    @Builder
+    @Getter
+    public static class Output implements io.kestra.core.models.tasks.Output {
+        @Schema(title = "Updated issue key or id", description = "The rendered `issueIdOrKey` that was updated.")
+        private final String issueIdOrKey;
+
+        @Schema(title = "Issue browse URL", description = "Link to the updated issue in the Jira web UI, built as `{baseUrl}/browse/{issueIdOrKey}`.")
+        private final String url;
+    }
 }

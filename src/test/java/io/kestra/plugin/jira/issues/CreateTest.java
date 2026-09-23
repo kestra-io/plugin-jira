@@ -1,64 +1,93 @@
 package io.kestra.plugin.jira.issues;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
-import java.util.Objects;
-import java.util.concurrent.TimeoutException;
+import java.util.Map;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.google.common.collect.ImmutableMap;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.runners.RunContext;
+import io.kestra.core.runners.RunContextFactory;
+import io.kestra.core.utils.IdUtils;
+import io.kestra.core.utils.TestsUtils;
 
-import io.kestra.core.junit.annotations.KestraTest;
-import io.kestra.core.models.executions.Execution;
-import io.kestra.core.queues.QueueException;
-import io.kestra.core.repositories.LocalFlowRepositoryLoader;
-import io.kestra.core.runners.TestRunner;
-import io.kestra.core.runners.TestRunnerUtils;
-import io.kestra.core.tenant.TenantService;
-
-import io.micronaut.context.ApplicationContext;
-import io.micronaut.runtime.server.EmbeddedServer;
 import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.startsWith;
 
-@KestraTest
-class CreateTest {
-
-    @Inject
-    private ApplicationContext applicationContext;
+class CreateTest extends AbstractJiraTest {
 
     @Inject
-    protected TestRunner runner;
+    private RunContextFactory runContextFactory;
 
-    @Inject
-    protected TestRunnerUtils runnerUtils;
+    @Test
+    void createsIssueAndExposesOutputs() throws Exception {
+        Create task = Create.builder()
+            .id(IdUtils.create())
+            .type(Create.class.getName())
+            .baseUrl(getApiBaseUrl())
+            .username(Property.ofValue("user@example.com"))
+            .password(Property.ofValue("token"))
+            .projectKey("PROJ")
+            .summary(Property.ofValue("Test summary"))
+            .description("Test description")
+            .issueTypeId(Property.ofValue("10001"))
+            .build();
 
-    @Inject
-    protected LocalFlowRepositoryLoader repositoryLoader;
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        Create.Output output = task.run(runContext);
 
-    @BeforeEach
-    void init() throws IOException, URISyntaxException {
-        repositoryLoader.load(Objects.requireNonNull(CreateTest.class.getClassLoader().getResource("flows")));
-        this.runner.run();
+        assertThat(output.getId(), is("10000"));
+        assertThat(output.getKey(), is("TEST-1"));
+        assertThat(output.getSelf(), is("http://mock-jira/rest/api/2/issue/10000"));
+        assertThat(output.getUrl(), is(getApiBaseUrl() + "/browse/TEST-1"));
+
+        assertThat(mockController.requests, hasSize(1));
+        JiraMockController.CapturedRequest request = mockController.requests.getFirst();
+        assertThat(request.method(), is("POST"));
+        assertThat(request.path(), is("/rest/api/2/issue/"));
+        assertThat(request.authorization(), startsWith("Basic "));
     }
 
     @Test
-    void flow() throws TimeoutException, QueueException {
-        EmbeddedServer embeddedServer = applicationContext.getBean(EmbeddedServer.class);
-        embeddedServer.start();
+    void stripsTrailingSlashFromBaseUrl() throws Exception {
+        Create task = Create.builder()
+            .id(IdUtils.create())
+            .type(Create.class.getName())
+            .baseUrl(getApiBaseUrl() + "/")
+            .username(Property.ofValue("user@example.com"))
+            .password(Property.ofValue("token"))
+            .projectKey("PROJ")
+            .summary(Property.ofValue("Test summary"))
+            .description("Test description")
+            .build();
 
-        Execution execution = runnerUtils.runOne(
-            TenantService.MAIN_TENANT,
-            "io.kestra.tests",
-            "jira",
-            null,
-            (f, e) -> ImmutableMap.of("url", embeddedServer.getURI().toString())
-        );
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        Create.Output output = task.run(runContext);
 
-        assertThat(execution.getTaskRunList(), hasSize(3));
+        assertThat(output.getUrl(), is(getApiBaseUrl() + "/browse/TEST-1"));
+        assertThat(mockController.requests.getFirst().path(), is("/rest/api/2/issue/"));
+    }
+
+    @Test
+    void supportsBaseUrlWithContextPath() throws Exception {
+        Create task = Create.builder()
+            .id(IdUtils.create())
+            .type(Create.class.getName())
+            .baseUrl(getApiBaseUrl() + "/jira")
+            .accessToken(Property.ofValue("oauth-token"))
+            .projectKey("PROJ")
+            .summary(Property.ofValue("Test summary"))
+            .description("Test description")
+            .build();
+
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        Create.Output output = task.run(runContext);
+
+        assertThat(output.getUrl(), is(getApiBaseUrl() + "/jira/browse/TEST-1"));
+        assertThat(mockController.requests.getFirst().path(), is("/jira/rest/api/2/issue/"));
+        assertThat(mockController.requests.getFirst().authorization(), is("Bearer oauth-token"));
     }
 }
