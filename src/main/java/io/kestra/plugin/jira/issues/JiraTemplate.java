@@ -1,13 +1,10 @@
 package io.kestra.plugin.jira.issues;
 
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 
-import org.apache.commons.io.IOUtils;
-
+import io.kestra.core.http.HttpResponse;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
-import io.kestra.core.models.tasks.VoidOutput;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
 
@@ -54,7 +51,7 @@ public abstract class JiraTemplate extends JiraClient {
 
     @Schema(
         title = "Labels",
-        description = "Rendered list of labels added to the issue; `kestra-bot` is always included by the template."
+        description = "Rendered list of labels added to the issue; `kestra-bot` is always included."
     )
     @PluginProperty(group = "advanced")
     protected Property<List<String>> labels;
@@ -66,39 +63,39 @@ public abstract class JiraTemplate extends JiraClient {
     @PluginProperty(group = "advanced")
     protected Property<String> issueTypeId;
 
-    @SuppressWarnings("unchecked")
-    @Override
-    public VoidOutput run(RunContext runContext) throws Exception {
+    /**
+     * Builds the request body — either the explicit {@code payload} override, or a JSON "fields" map
+     * assembled directly from the rendered project/summary/description/labels/issue-type properties —
+     * and sends it to {@code uri}.
+     *
+     * <p>
+     * The map is built in Java rather than interpolated into a Pebble-rendered JSON template: optional
+     * fields (summary, description) can then simply be omitted instead of resolving to an undefined
+     * Pebble variable, and Jackson correctly escapes values containing quotes or newlines.
+     */
+    protected HttpResponse<String> sendTemplated(RunContext runContext, String method, String uri) throws Exception {
         var renderedPayload = runContext.render(this.payload).as(String.class);
         if (renderedPayload.isPresent() && !renderedPayload.get().isBlank()) {
-            return super.run(runContext);
+            return this.execute(runContext, method, uri, renderedPayload.get());
         }
 
-        Map<String, Object> mainMap = new HashMap<>();
-        Map<String, Object> renderedAttributesMap = new HashMap<>(Map.of("projectKey", runContext.render(projectKey)));
-        runContext.render(this.summary).as(String.class).ifPresent(s -> renderedAttributesMap.put("summary", s));
+        var fields = new LinkedHashMap<String, Object>();
+        fields.put("project", Map.of("key", runContext.render(this.projectKey)));
 
-        var renderedLabels = runContext.render(this.labels).asList(String.class);
-        if (!renderedLabels.isEmpty()) {
-            renderedAttributesMap.put("labels", renderedLabels);
-        }
-        if (runContext.render(description) != null) {
-            renderedAttributesMap.put("description", runContext.render(description));
-        }
-        runContext.render(this.issueTypeId).as(String.class).ifPresent(s -> renderedAttributesMap.put("issueTypeId", s));
+        runContext.render(this.summary).as(String.class).ifPresent(s -> fields.put("summary", s));
 
-        mainMap.put("fields", renderedAttributesMap);
-        var renderedTemplateUri = runContext.render(this.templateUri).as(String.class);
-        if (renderedTemplateUri.isPresent()) {
-            String template = IOUtils.toString(
-                Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(renderedTemplateUri.get())),
-                StandardCharsets.UTF_8
-            );
-            String render = runContext.render(template, renderedAttributesMap);
-            mainMap = (Map<String, Object>) JacksonMapper.ofJson().readValue(render, Object.class);
-
+        var rDescription = runContext.render(this.description);
+        if (rDescription != null && !rDescription.isBlank()) {
+            fields.put("description", rDescription);
         }
-        this.payload = Property.ofValue(JacksonMapper.ofJson().writeValueAsString(mainMap));
-        return super.run(runContext);
+
+        runContext.render(this.issueTypeId).as(String.class).ifPresent(id -> fields.put("issuetype", Map.of("id", id)));
+
+        var labels = new ArrayList<>(List.of("kestra-bot"));
+        labels.addAll(runContext.render(this.labels).asList(String.class));
+        fields.put("labels", labels);
+
+        var payloadRendered = JacksonMapper.ofJson().writeValueAsString(Map.of("fields", fields));
+        return this.execute(runContext, method, uri, payloadRendered);
     }
 }

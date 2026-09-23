@@ -8,8 +8,8 @@ Set `baseUrl` to your Jira instance URL (e.g. `https://your-domain.atlassian.net
 
 ## Tasks
 
-`issues.Create` creates a new Jira issue — set `projectKey`, `summary`, and optionally `description`, `labels`, and `issueTypeId`.
+`issues.Create` creates a new Jira issue — set `projectKey`, `summary`, and optionally `description`, `labels`, and `issueTypeId`. Outputs `id`, `key`, `url` (the issue's browse URL), and `self`; chain `{{ outputs.<taskId>.key }}` into a following `issues.CreateComment` or `issues.UpdateFields` task.
 
-`issues.CreateComment` adds a comment to an existing issue — set `issueIdOrKey` to the issue key or ID and `body` to the comment text.
+`issues.CreateComment` adds a comment to an existing issue — set `issueIdOrKey` to the issue key or ID and `body` to the comment text. Outputs `id` (comment id), `issueIdOrKey`, `url` (the issue's browse URL with the comment focused), and `self`.
 
-`issues.UpdateFields` updates one or more fields on an existing issue — set `issueIdOrKey` and pass a `fields` map of field names to new values.
+`issues.UpdateFields` updates one or more fields on an existing issue via `PUT /rest/api/2/issue/{issueIdOrKey}` — set `issueIdOrKey` and pass a `fields` map of field names to new values. Outputs `issueIdOrKey` and `url` (the issue's browse URL); Jira's edit-issue endpoint returns no body, so these outputs are derived from the task's own inputs.
