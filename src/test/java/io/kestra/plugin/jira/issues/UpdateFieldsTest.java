@@ -30,7 +30,7 @@ class UpdateFieldsTest extends AbstractJiraTest {
             .baseUrl(getApiBaseUrl())
             .username(Property.ofValue("user@example.com"))
             .password(Property.ofValue("token"))
-            .projectKey("PROJ")
+            .projectKey("PROJ") // deprecated and ignored; kept to prove old flows setting it still work
             .issueIdOrKey("TEST-1")
             .fields(Property.ofValue(Map.of("description", "Updated description")))
             .build();
@@ -56,7 +56,6 @@ class UpdateFieldsTest extends AbstractJiraTest {
             .type(UpdateFields.class.getName())
             .baseUrl(getApiBaseUrl() + "/jira")
             .accessToken(Property.ofValue("oauth-token"))
-            .projectKey("PROJ")
             .issueIdOrKey("TEST-1")
             .fields(Property.ofValue(Map.of("summary", "Updated summary")))
             .build();
@@ -77,7 +76,6 @@ class UpdateFieldsTest extends AbstractJiraTest {
             .baseUrl(getApiBaseUrl())
             .username(Property.ofValue("user@example.com"))
             .password(Property.ofValue("token"))
-            .projectKey("PROJ")
             .issueIdOrKey("OPS 123")
             .fields(Property.ofValue(Map.of("summary", "Updated summary")))
             .build();

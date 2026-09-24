@@ -44,8 +44,7 @@ public abstract class JiraClient extends Task {
         title = "Jira username or email",
         description = "Used with `password` for Basic/API token authentication; ignored when an `accessToken` is provided."
     )
-    @PluginProperty(secret = true, group = "connection")
-    @ToString.Exclude
+    @PluginProperty(group = "connection")
     protected Property<String> username;
 
     @Schema(

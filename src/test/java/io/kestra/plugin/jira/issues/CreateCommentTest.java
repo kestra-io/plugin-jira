@@ -31,7 +31,7 @@ class CreateCommentTest extends AbstractJiraTest {
             .baseUrl(getApiBaseUrl())
             .username(Property.ofValue("user@example.com"))
             .password(Property.ofValue("token"))
-            .projectKey("PROJ")
+            .projectKey("PROJ") // deprecated and ignored; kept to prove old flows setting it still work
             .issueIdOrKey("TEST-1")
             .body("This ticket is not moving")
             .build();
@@ -59,7 +59,6 @@ class CreateCommentTest extends AbstractJiraTest {
             .baseUrl(getApiBaseUrl() + "/jira/")
             .username(Property.ofValue("user@example.com"))
             .password(Property.ofValue("token"))
-            .projectKey("PROJ")
             .issueIdOrKey("TEST-1")
             .body("Comment via context path")
             .build();
@@ -79,7 +78,6 @@ class CreateCommentTest extends AbstractJiraTest {
             .baseUrl(getApiBaseUrl() + "/missing-key")
             .username(Property.ofValue("user@example.com"))
             .password(Property.ofValue("token"))
-            .projectKey("PROJ")
             .issueIdOrKey("TEST-1")
             .body("Comment body")
             .build();
@@ -98,7 +96,6 @@ class CreateCommentTest extends AbstractJiraTest {
             .baseUrl(getApiBaseUrl())
             .username(Property.ofValue("user@example.com"))
             .password(Property.ofValue("token"))
-            .projectKey("PROJ")
             .issueIdOrKey("OPS 123")
             .body("Comment body")
             .build();
