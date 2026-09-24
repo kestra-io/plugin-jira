@@ -24,6 +24,5 @@ tasks:
     baseUrl: "{{ inputs.url }}"
     username: your_email@example.com
     password: your_jira_api_token
-    projectKey: myproject
     issueIdOrKey: "{{ outputs.create_issue.key }}"
     body: "{{ execution.id }} has failed on {{ taskrun.startDate }}"
