@@ -53,7 +53,6 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
                     baseUrl: https://your-domain.atlassian.net
                     username: your_email@example.com
                     password: "{{ secret('JIRA_API_TOKEN') }}"
-                    projectKey: project_key
                     issueIdOrKey: "TID-53"
                     body: "This ticket is not moving, do we need to outsource this!"
                 """
@@ -85,14 +84,13 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
                     baseUrl: https://your-domain.atlassian.net
                     username: your_email@example.com
                     password: "{{ secret('JIRA_API_TOKEN') }}"
-                    projectKey: myproject
                     issueIdOrKey: "{{ outputs.create_issue.key }}"
                     body: "Linked automatically from the same flow run."
                 """
         )
     }
 )
-public class CreateComment extends JiraTemplate implements RunnableTask<CreateComment.Output> {
+public class CreateComment extends JiraDeprecatedIssueFields implements RunnableTask<CreateComment.Output> {
     @Schema(
         title = "Issue key or id to comment",
         description = "Rendered value appended to `/rest/api/2/issue/` before `/comment`."

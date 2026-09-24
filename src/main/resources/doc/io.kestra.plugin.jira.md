@@ -13,3 +13,5 @@ Set `baseUrl` to your Jira instance URL (e.g. `https://your-domain.atlassian.net
 `issues.CreateComment` adds a comment to an existing issue — set `issueIdOrKey` to the issue key or ID and `body` to the comment text. Outputs `id` (comment id), `issueIdOrKey`, `url` (the issue's browse URL with the comment focused), and `self`.
 
 `issues.UpdateFields` updates one or more fields on an existing issue via `PUT /rest/api/2/issue/{issueIdOrKey}` — set `issueIdOrKey` and pass a `fields` map of field names to new values. Outputs `issueIdOrKey` and `url` (the issue's browse URL); Jira's edit-issue endpoint returns no body, so these outputs are derived from the task's own inputs.
+
+`projectKey`, `summary`, `description`, `labels`, and `issueTypeId` are deprecated and ignored on `issues.CreateComment` and `issues.UpdateFields`; they are kept only for backward compatibility.

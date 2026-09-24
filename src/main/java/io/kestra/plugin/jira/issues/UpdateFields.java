@@ -62,7 +62,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
         )
     }
 )
-public class UpdateFields extends JiraTemplate implements RunnableTask<UpdateFields.Output> {
+public class UpdateFields extends JiraDeprecatedIssueFields implements RunnableTask<UpdateFields.Output> {
 
     private final static ObjectMapper mapper = JacksonMapper.ofJson();
 
