@@ -1,17 +1,12 @@
 package io.kestra.plugin.jira.issues;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.Objects;
-
-import org.apache.commons.io.IOUtils;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
-import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
@@ -36,7 +31,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
 @NoArgsConstructor
 @Schema(
     title = "Add a comment to a Jira issue",
-    description = "Renders the issue key and comment body, fills `comment-jira-template.peb`, then posts to `/rest/api/2/issue/{issueIdOrKey}/comment`. Uses the same authentication fields as other Jira tasks."
+    description = "Renders the issue key and comment body, serializes the request as JSON, then posts to `/rest/api/2/issue/{issueIdOrKey}/comment`. Uses the same authentication fields as other Jira tasks."
 )
 @Plugin(
     examples = {
@@ -101,32 +96,21 @@ public class CreateComment extends JiraDeprecatedIssueFields implements Runnable
 
     @Schema(
         title = "Comment text",
-        description = "Rendered markdown or text inserted as `body` via `comment-jira-template.peb`."
+        description = "Rendered markdown or text sent as the Jira comment body."
     )
     @PluginProperty(dynamic = true, group = "main")
     @NotBlank
     protected String body;
 
-    @SuppressWarnings("unchecked")
     @Override
     public Output run(RunContext runContext) throws Exception {
-        this.templateUri = Property.ofValue("comment-jira-template.peb");
-
         var rIssueIdOrKey = runContext.render(this.issueIdOrKey);
+        var rBody = runContext.render(this.body);
         var encodedIssueIdOrKey = JiraUtil.encodePathSegment(rIssueIdOrKey);
         var rBrowseRoot = this.browseRoot(runContext);
         var uri = rBrowseRoot + ISSUE_API_ROUTE + encodedIssueIdOrKey + COMMENT_API_ROUTE;
-
-        var template = IOUtils.toString(
-            Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(runContext.render(this.templateUri).as(String.class).orElse(null))),
-            StandardCharsets.UTF_8
-        );
-
-        var render = runContext.render(template, Map.of("body", runContext.render(body)));
-
-        var mainMap = (Map<String, Object>) JacksonMapper.ofJson().readValue(render, Object.class);
-
-        var response = this.execute(runContext, "POST", uri, JacksonMapper.ofJson().writeValueAsString(mainMap));
+        var payload = JacksonMapper.ofJson().writeValueAsString(Map.of("body", rBody));
+        var response = this.execute(runContext, "POST", uri, payload);
 
         var createdComment = JiraUtil.parseJsonResponse(runContext, response, CreatedComment.class, new CreatedComment(null, null));
         JiraUtil.requireField(response, createdComment.id(), "a comment id");

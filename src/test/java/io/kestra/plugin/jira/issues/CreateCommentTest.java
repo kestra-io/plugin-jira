@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
+import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
 
@@ -60,6 +61,26 @@ class CreateCommentTest extends AbstractJiraTest {
         assertThat(request.body(), not(containsString("Ignored")));
         assertThat(request.body(), not(containsString("PROJ")));
         assertThat(request.body(), not(containsString("99999")));
+    }
+
+    @Test
+    void serializesSpecialCharactersInCommentBody() throws Exception {
+        var comment = "Flow \"etl\" failed\\on the first line\nSee the second line";
+        var task = CreateComment.builder()
+            .id(IdUtils.create())
+            .type(CreateComment.class.getName())
+            .baseUrl(getApiBaseUrl())
+            .username(Property.ofValue("user@example.com"))
+            .password(Property.ofValue("token"))
+            .issueIdOrKey("TEST-1")
+            .body(comment)
+            .build();
+
+        var runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        task.run(runContext);
+
+        var requestBody = JacksonMapper.ofJson().readTree(mockController.requests.getFirst().body());
+        assertThat(requestBody.get("body").asText(), is(comment));
     }
 
     @Test

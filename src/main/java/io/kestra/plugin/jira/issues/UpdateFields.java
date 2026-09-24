@@ -1,13 +1,8 @@
 package io.kestra.plugin.jira.issues;
 
-import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
-
-import org.apache.commons.io.IOUtils;
-
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
@@ -37,7 +32,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
 @NoArgsConstructor
 @Schema(
     title = "Update fields on a Jira issue",
-    description = "Sends a PUT to Jira's issue API to change selected fields, per the Jira REST v2 `PUT /rest/api/2/issue/{issueIdOrKey}` edit-issue endpoint. Renders `issueIdOrKey` and `fields` with flow variables, then serializes values via `update-field-template.peb` (nested objects are not supported). Requires Jira authentication (Basic or OAuth) configured on the task."
+    description = "Sends a PUT to Jira's issue API to change selected fields, per the Jira REST v2 `PUT /rest/api/2/issue/{issueIdOrKey}` edit-issue endpoint. Renders `issueIdOrKey` and `fields` with flow variables, then serializes the request as JSON (nested objects are not supported). Requires Jira authentication (Basic or OAuth) configured on the task."
 )
 @Plugin(
     examples = {
@@ -63,9 +58,6 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
     }
 )
 public class UpdateFields extends JiraDeprecatedIssueFields implements RunnableTask<UpdateFields.Output> {
-
-    private final static ObjectMapper mapper = JacksonMapper.ofJson();
-
     @Schema(
         title = "Issue key or id to update",
         description = "Rendered value appended to `/rest/api/2/issue/` before sending the request."
@@ -76,7 +68,7 @@ public class UpdateFields extends JiraDeprecatedIssueFields implements RunnableT
 
     @Schema(
         title = "Field names and new values",
-        description = "Rendered map of field keys to updated values; entries are stringified by the template, so use simple scalar values."
+        description = "Rendered map of field keys to updated values; entries are stringified before JSON serialization, so use simple scalar values."
     )
     @NotNull
     @PluginProperty(group = "main")
@@ -84,31 +76,18 @@ public class UpdateFields extends JiraDeprecatedIssueFields implements RunnableT
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        this.templateUri = Property.ofValue("update-field-template.peb");
-
         var rIssueIdOrKey = runContext.render(this.issueIdOrKey);
+        var rFields = runContext.render(this.fields).asMap(String.class, Object.class);
         var encodedIssueIdOrKey = JiraUtil.encodePathSegment(rIssueIdOrKey);
         var rBrowseRoot = this.browseRoot(runContext);
         var uri = rBrowseRoot + ISSUE_API_ROUTE + encodedIssueIdOrKey;
 
-        var templateUri = runContext.render(this.templateUri)
-            .as(String.class)
-            .orElseThrow(() -> new IllegalArgumentException("Invalid templateUri: " + this.templateUri));
-
-        var template = IOUtils.toString(
-            Objects.requireNonNull(this.getClass().getClassLoader().getResourceAsStream(templateUri)),
-            StandardCharsets.UTF_8
-        );
-
-        var render = runContext.render(
-            template, Map.of("fields", runContext.render(this.fields).asMap(String.class, Object.class))
-        );
-
-        Map<String, Object> body = mapper.readValue(render, new TypeReference<>() {
-        });
+        var stringFields = new LinkedHashMap<String, String>();
+        rFields.forEach((key, value) -> stringFields.put(key, Objects.toString(value, "")));
+        var payload = JacksonMapper.ofJson().writeValueAsString(Map.of("fields", stringFields));
 
         // Jira REST v2 only accepts PUT on /rest/api/2/issue/{issueIdOrKey} for editing an issue; POST is rejected.
-        this.execute(runContext, "PUT", uri, mapper.writeValueAsString(body));
+        this.execute(runContext, "PUT", uri, payload);
 
         return Output.builder()
             .issueIdOrKey(rIssueIdOrKey)

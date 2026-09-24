@@ -65,7 +65,7 @@ public abstract class JiraClient extends Task {
 
     @Schema(
         title = "Prepared JSON payload",
-        description = "Rendered body sent as `application/json`; usually built from a template when not explicitly provided."
+        description = "Rendered JSON body sent as `application/json` when a task supports an explicit payload override."
     )
     @PluginProperty(group = "advanced")
     protected Property<String> payload;

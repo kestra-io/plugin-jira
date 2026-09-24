@@ -1,8 +1,0 @@
-{
-    "fields": {
-        {% for entry in fields %}
-            "{{entry.key}}": "{{entry.value}}"
-        {% if not loop.last %},{% endif %}
-        {% endfor %}
-    }
-}

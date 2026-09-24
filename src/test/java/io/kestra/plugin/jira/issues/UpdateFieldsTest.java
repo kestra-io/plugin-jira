@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.runners.RunContextFactory;
+import io.kestra.core.serializers.JacksonMapper;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
 
@@ -58,6 +59,30 @@ class UpdateFieldsTest extends AbstractJiraTest {
         assertThat(request.body(), not(containsString("Ignored")));
         assertThat(request.body(), not(containsString("PROJ")));
         assertThat(request.body(), not(containsString("99999")));
+    }
+
+    @Test
+    void serializesSpecialCharactersAndKeepsScalarValuesAsStrings() throws Exception {
+        var summary = "Flow \"etl\" failed\\on the first line\nSee the second line";
+        var task = UpdateFields.builder()
+            .id(IdUtils.create())
+            .type(UpdateFields.class.getName())
+            .baseUrl(getApiBaseUrl())
+            .username(Property.ofValue("user@example.com"))
+            .password(Property.ofValue("token"))
+            .issueIdOrKey("TEST-1")
+            .fields(Property.ofValue(Map.of("summary", summary, "storyPoints", 3, "notify", true)))
+            .build();
+
+        var runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        task.run(runContext);
+
+        var fields = JacksonMapper.ofJson().readTree(mockController.requests.getFirst().body()).get("fields");
+        assertThat(fields.get("summary").asText(), is(summary));
+        assertThat(fields.get("storyPoints").isTextual(), is(true));
+        assertThat(fields.get("storyPoints").asText(), is("3"));
+        assertThat(fields.get("notify").isTextual(), is(true));
+        assertThat(fields.get("notify").asText(), is("true"));
     }
 
     @Test
