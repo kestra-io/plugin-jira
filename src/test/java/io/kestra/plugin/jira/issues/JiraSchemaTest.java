@@ -12,9 +12,10 @@ import io.kestra.core.models.tasks.Task;
 import jakarta.inject.Inject;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.notNullValue;
 
 @KestraTest
 class JiraSchemaTest {
@@ -41,20 +42,24 @@ class JiraSchemaTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void createCommentAndUpdateFieldsDoNotExposeIssueOnlyFields() {
+    void createCommentAndUpdateFieldsExposeIssueFieldsAsDeprecatedAndOptional() {
         for (Class<? extends Task> taskClass : List.of(CreateComment.class, UpdateFields.class)) {
             var generate = jsonSchemaGenerator.properties(Task.class, taskClass);
             var properties = (Map<String, Map<String, Object>>) generate.get("properties");
+            var required = (List<String>) generate.getOrDefault("required", List.of());
 
-            for (String issueOnlyField : List.of("summary", "description", "labels", "issueTypeId")) {
-                assertThat("'" + issueOnlyField + "' must not be exposed on " + taskClass.getSimpleName(), properties.get(issueOnlyField), is(nullValue()));
+            for (String deprecatedField : List.of("projectKey", "summary", "description", "labels", "issueTypeId")) {
+                var propertySchema = properties.get(deprecatedField);
+                assertThat("'" + deprecatedField + "' must still be exposed (deprecated) on " + taskClass.getSimpleName(), propertySchema, is(notNullValue()));
+                assertThat("'" + deprecatedField + "' must be marked deprecated on " + taskClass.getSimpleName(), deprecated(propertySchema), is(true));
+                assertThat("'" + deprecatedField + "' must not be required on " + taskClass.getSimpleName(), required, not(hasItem(deprecatedField)));
             }
         }
     }
 
     // Dynamic-renderable non-String properties (e.g. Integer, enum, List) render as an "anyOf" of type
-    // variants (typed value + Pebble expression string) instead of a flat schema, so `$group`/`$secret`
-    // live on the first "anyOf" entry rather than at the top level.
+    // variants (typed value + Pebble expression string) instead of a flat schema, so `$group`/`$secret`/
+    // `$deprecated` live on the first "anyOf" entry rather than at the top level.
     private static Object group(Map<String, Object> propertySchema) {
         return metadata(propertySchema).get("$group");
     }
@@ -63,9 +68,13 @@ class JiraSchemaTest {
         return metadata(propertySchema).get("$secret");
     }
 
+    private static Object deprecated(Map<String, Object> propertySchema) {
+        return metadata(propertySchema).get("$deprecated");
+    }
+
     @SuppressWarnings("unchecked")
     private static Map<String, Object> metadata(Map<String, Object> propertySchema) {
-        if (propertySchema.containsKey("$group") || propertySchema.containsKey("$secret")) {
+        if (propertySchema.containsKey("$group") || propertySchema.containsKey("$secret") || propertySchema.containsKey("$deprecated")) {
             return propertySchema;
         }
         var anyOf = (List<Map<String, Object>>) propertySchema.get("anyOf");

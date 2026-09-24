@@ -1,5 +1,6 @@
 package io.kestra.plugin.jira.issues;
 
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 
 class UpdateFieldsTest extends AbstractJiraTest {
 
@@ -24,13 +26,19 @@ class UpdateFieldsTest extends AbstractJiraTest {
 
     @Test
     void updatesFieldsWithPutAndExposesOutputs() throws Exception {
+        // projectKey/summary/description/labels/issueTypeId are deprecated and ignored on this task;
+        // set here to prove old flow configs still deserialize, run, and produce an unchanged request.
         UpdateFields task = UpdateFields.builder()
             .id(IdUtils.create())
             .type(UpdateFields.class.getName())
             .baseUrl(getApiBaseUrl())
             .username(Property.ofValue("user@example.com"))
             .password(Property.ofValue("token"))
-            .projectKey("PROJ") // deprecated and ignored; kept to prove old flows setting it still work
+            .projectKey("PROJ")
+            .summary(Property.ofValue("Ignored summary"))
+            .description("Ignored description")
+            .labels(Property.ofValue(List.of("ignored-label")))
+            .issueTypeId(Property.ofValue("99999"))
             .issueIdOrKey("TEST-1")
             .fields(Property.ofValue(Map.of("description", "Updated description")))
             .build();
@@ -47,6 +55,9 @@ class UpdateFieldsTest extends AbstractJiraTest {
         assertThat(request.method(), is("PUT"));
         assertThat(request.path(), is("/rest/api/2/issue/TEST-1"));
         assertThat(request.body(), containsString("Updated description"));
+        assertThat(request.body(), not(containsString("Ignored")));
+        assertThat(request.body(), not(containsString("PROJ")));
+        assertThat(request.body(), not(containsString("99999")));
     }
 
     @Test

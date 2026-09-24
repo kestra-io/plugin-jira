@@ -62,17 +62,9 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
         )
     }
 )
-public class UpdateFields extends JiraTemplate implements RunnableTask<UpdateFields.Output> {
+public class UpdateFields extends JiraDeprecatedIssueFields implements RunnableTask<UpdateFields.Output> {
 
     private final static ObjectMapper mapper = JacksonMapper.ofJson();
-
-    @Schema(
-        title = "Project key",
-        description = "Deprecated and ignored: field updates are addressed to `issueIdOrKey` directly and do not require a project key. This property has no effect and will be removed in a future release."
-    )
-    @PluginProperty(dynamic = true, group = "destination")
-    @Deprecated
-    protected String projectKey;
 
     @Schema(
         title = "Issue key or id to update",
