@@ -23,7 +23,9 @@ Single-module plugin. Source packages under `io.kestra.plugin`:
 
 - `io.kestra.plugin.jira.issues.Create`
 - `io.kestra.plugin.jira.issues.CreateComment`
+- `io.kestra.plugin.jira.issues.Get`
 - `io.kestra.plugin.jira.issues.UpdateFields`
+- `io.kestra.plugin.jira.comments.Get`
 
 ### Project Structure
 

@@ -12,6 +12,8 @@ import io.kestra.core.serializers.JacksonMapper;
 public class JiraUtil {
     public static final String ISSUE_API_ROUTE = "/rest/api/2/issue/";
 
+    public static final String SEARCH_API_ROUTE = "/rest/api/2/search";
+
     public static final String COMMENT_API_ROUTE = "/comment";
 
     public static final String BROWSE_ROUTE = "/browse/";

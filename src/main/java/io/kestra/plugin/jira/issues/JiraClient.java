@@ -112,11 +112,16 @@ public abstract class JiraClient extends Task {
         var renderedUsername = runContext.render(this.username).as(String.class);
         var renderedPassword = runContext.render(this.password).as(String.class);
 
-        var request = HttpRequest.builder()
+        var requestBuilder = HttpRequest.builder()
             .uri(URI.create(uri))
             .method(method)
-            .body(HttpRequest.StringRequestBody.builder().content(payload).build())
             .addHeader("Content-Type", "application/json");
+
+        if (payload != null) {
+            requestBuilder = requestBuilder.body(HttpRequest.StringRequestBody.builder().content(payload).build());
+        }
+
+        var request = requestBuilder;
 
         if (renderedUsername.isPresent() && renderedPassword.isPresent()) {
             String authHeader = Base64.getEncoder().encodeToString(
