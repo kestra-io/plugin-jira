@@ -135,12 +135,9 @@ public class Create extends JiraClient implements RunnableTask<Create.Output> {
     }
 
     /**
-     * Builds the request body — either the explicit {@code payload} override, or a JSON "fields" map
-     * assembled directly from the rendered project/summary/description/labels/issue-type properties —
-     * and sends it to {@code uri}.
-     *
-     * <p>
-     * The map is built in Java rather than interpolated into a Pebble-rendered JSON template: optional
+     * Builds the request body: either the explicit {@code payload} override, or a JSON "fields" map
+     * assembled directly from the rendered project/summary/description/labels/issue-type properties.
+     * It is built in Java rather than interpolated into a Pebble-rendered JSON template: optional
      * fields (summary, description) can then simply be omitted instead of resolving to an undefined
      * Pebble variable, and Jackson correctly escapes values containing quotes or newlines.
      */

@@ -72,7 +72,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
 
                   - id: log_issue_url
                     type: io.kestra.plugin.core.log.Log
-                    message: "Created {{ outputs.create_issue.key }} — {{ outputs.create_issue.url }}"
+                    message: "Created {{ outputs.create_issue.key }}: {{ outputs.create_issue.url }}"
 
                   - id: create_comment_on_a_ticket
                     type: io.kestra.plugin.jira.issues.CreateComment

@@ -2,8 +2,8 @@
 
 ## What
 
-- Provides plugin components under `io.kestra.plugin.jira.issues`.
-- Includes classes such as `JiraUtil`, `Create`, `JiraClient`, `UpdateFields`.
+- Provides plugin components under `io.kestra.plugin.jira.issues` and `io.kestra.plugin.jira.comments`.
+- Includes classes such as `JiraUtil`, `Create`, `JiraClient`, `UpdateFields`, and `Get` tasks that fetch issues (by key or via JQL) and comments.
 
 ## Why
 
@@ -23,14 +23,20 @@ Single-module plugin. Source packages under `io.kestra.plugin`:
 
 - `io.kestra.plugin.jira.issues.Create`
 - `io.kestra.plugin.jira.issues.CreateComment`
+- `io.kestra.plugin.jira.issues.Get`
 - `io.kestra.plugin.jira.issues.UpdateFields`
+- `io.kestra.plugin.jira.comments.Get`
 
 ### Project Structure
 
 ```
 plugin-jira/
 ├── src/main/java/io/kestra/plugin/jira/issues/
+├── src/main/java/io/kestra/plugin/jira/comments/
 ├── src/test/java/io/kestra/plugin/jira/issues/
+├── src/test/java/io/kestra/plugin/jira/comments/
+├── src/main/resources/metadata/
+├── src/main/resources/doc/
 ├── build.gradle
 └── README.md
 ```

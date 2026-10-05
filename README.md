@@ -46,7 +46,7 @@
 ## What
 
 - Provides plugin components under `io.kestra.plugin.jira.issues`.
-- Includes classes such as `JiraUtil`, `Create`, `JiraClient`, `UpdateFields`.
+- Includes classes such as `JiraUtil`, `Create`, `CreateComment`, `Get`, `UpdateFields`, and tasks to fetch issues and comments under `io.kestra.plugin.jira.comments`.
 
 ## Documentation
 * Full documentation can be found under: [kestra.io/docs](https://kestra.io/docs)

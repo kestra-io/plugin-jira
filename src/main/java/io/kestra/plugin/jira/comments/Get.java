@@ -1,0 +1,251 @@
+package io.kestra.plugin.jira.comments;
+
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.core.JsonEncoding;
+
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
+import io.kestra.core.models.annotations.Example;
+import io.kestra.core.models.annotations.Plugin;
+import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.property.Property;
+import io.kestra.core.models.tasks.RunnableTask;
+import io.kestra.core.models.tasks.common.FetchType;
+import io.kestra.core.runners.RunContext;
+import io.kestra.core.serializers.JacksonMapper;
+import io.kestra.plugin.jira.issues.JiraClient;
+import io.kestra.plugin.jira.issues.JiraUtil;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
+import lombok.Builder;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+import lombok.experimental.SuperBuilder;
+
+import static io.kestra.plugin.jira.issues.JiraUtil.COMMENT_API_ROUTE;
+import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
+
+@SuperBuilder
+@ToString
+@EqualsAndHashCode
+@Getter
+@NoArgsConstructor
+@Schema(
+    title = "Get Jira comments",
+    description = "Fetch a single comment by id, or all comments of a Jira issue, from Jira's REST v2 API. Uses the same authentication fields as other Jira tasks."
+)
+@Plugin(
+    examples = {
+        @Example(
+            title = "Fetch all comments of a Jira issue and log the latest one.",
+            full = true,
+            code = """
+                id: jira_get_comments
+                namespace: company.myteam
+
+                tasks:
+                  - id: get_comments
+                    type: io.kestra.plugin.jira.comments.Get
+                    baseUrl: https://your-domain.atlassian.net
+                    username: your_email@example.com
+                    password: "{{ secret('JIRA_API_TOKEN') }}"
+                    issueIdOrKey: "TID-53"
+                    fetchType: FETCH
+
+                  - id: log_latest_comment
+                    type: io.kestra.plugin.core.log.Log
+                    message: "{{ outputs.get_comments.rows | last }}"
+                """
+        ),
+        @Example(
+            title = "Fetch a single Jira comment by id.",
+            full = true,
+            code = """
+                id: jira_get_comment
+                namespace: company.myteam
+
+                tasks:
+                  - id: get_comment
+                    type: io.kestra.plugin.jira.comments.Get
+                    baseUrl: https://your-domain.atlassian.net
+                    username: your_email@example.com
+                    password: "{{ secret('JIRA_API_TOKEN') }}"
+                    issueIdOrKey: "TID-53"
+                    commentId: "10100"
+                    fetchType: FETCH_ONE
+                """
+        )
+    }
+)
+public class Get extends JiraClient implements RunnableTask<Get.Output> {
+
+    @Schema(
+        title = "How fetched comments are exposed",
+        description = "`FETCH_ONE` returns the comment addressed by `commentId` as `row`; `FETCH` returns the comments of the issue addressed by `issueIdOrKey` as `rows`; `STORE` stores those comments in Kestra storage and exposes the storage URI."
+    )
+    @Builder.Default
+    @PluginProperty(group = "processing")
+    private Property<FetchType> fetchType = Property.ofValue(FetchType.FETCH);
+
+    @Schema(
+        title = "Issue key or id owning the comments",
+        description = "Rendered value appended to `/rest/api/2/issue/` before the comment route."
+    )
+    @PluginProperty(group = "main")
+    @NotNull
+    private Property<String> issueIdOrKey;
+
+    @Schema(
+        title = "Comment id",
+        description = "Required for `fetchType: FETCH_ONE`; rendered value appended after the issue's `/comment` route."
+    )
+    @PluginProperty(group = "main")
+    private Property<String> commentId;
+
+    @Schema(
+        title = "Page size for the issue comments route",
+        description = "Only used for `fetchType: FETCH` or `STORE`; every page is fetched until Jira reports no more results, so `size` reflects the full comment count. Must be between 1 and 5000."
+    )
+    @Builder.Default
+    @PluginProperty(group = "advanced")
+    private Property<Integer> maxResults = Property.ofValue(50);
+
+    @Override
+    public Output run(RunContext runContext) throws Exception {
+        var rFetchType = runContext.render(this.fetchType).as(FetchType.class).orElse(FetchType.FETCH);
+        var rBrowseRoot = this.browseRoot(runContext);
+        var rIssueIdOrKey = optionalRendered(runContext, this.issueIdOrKey)
+            .filter(value -> !value.isBlank())
+            .orElseThrow(() -> new IllegalArgumentException("`issueIdOrKey` is required"));
+        var encodedIssueIdOrKey = JiraUtil.encodePathSegment(rIssueIdOrKey);
+        var issueRoute = rBrowseRoot + ISSUE_API_ROUTE + encodedIssueIdOrKey + COMMENT_API_ROUTE;
+
+        return switch (rFetchType) {
+            case FETCH_ONE -> fetchOne(runContext, issueRoute);
+            case FETCH, STORE -> fetchMany(runContext, issueRoute, rFetchType);
+            case NONE -> Output.builder().size(0L).build();
+        };
+    }
+
+    private Output fetchOne(RunContext runContext, String issueRoute) throws Exception {
+        var rCommentId = optionalRendered(runContext, this.commentId)
+            .filter(value -> !value.isBlank())
+            .orElseThrow(() -> new IllegalArgumentException("`commentId` is required when `fetchType` is FETCH_ONE"));
+        var uri = issueRoute + "/" + JiraUtil.encodePathSegment(rCommentId);
+        var response = this.execute(runContext, "GET", uri, null);
+
+        Map<String, Object> comment = JiraUtil.parseJsonResponse(runContext, response, Map.class, null);
+        JiraUtil.requireField(response, comment == null ? null : comment.get("id"), "a comment id");
+
+        return Output.builder()
+            .row(comment)
+            .size(1L)
+            .build();
+    }
+
+    /** Pages through the issue comments route, handing each page to {@code pageHandler}. */
+    private long fetchPages(RunContext runContext, String issueRoute, int rMaxResults, PageHandler pageHandler) throws Exception {
+        Integer total = null;
+        var startAt = 0;
+        long fetched = 0;
+        int lastPageSize;
+
+        do {
+            var uri = issueRoute + "?maxResults=" + rMaxResults + "&startAt=" + startAt;
+            var response = this.execute(runContext, "GET", uri, null);
+
+            var commentsResponse = JiraUtil.parseJsonResponseStrict(
+                runContext,
+                response,
+                CommentsResponse.class,
+                new CommentsResponse(null, null, null, List.of())
+            );
+            JiraUtil.requireField(response, commentsResponse.comments(), "a list of comments");
+
+            var page = commentsResponse.comments();
+            if (page.isEmpty()) {
+                break;
+            }
+            pageHandler.handle(page);
+            lastPageSize = page.size();
+            fetched += lastPageSize;
+            startAt += lastPageSize;
+            total = commentsResponse.total();
+        } while (total != null && startAt < total && lastPageSize > 0);
+
+        return fetched;
+    }
+
+    private Output fetchMany(RunContext runContext, String issueRoute, FetchType rFetchType) throws Exception {
+        var rMaxResults = JiraUtil.validateMaxResults(runContext.render(this.maxResults).as(Integer.class).orElse(50));
+
+        var outputBuilder = Output.builder();
+
+        // STORE streams each page straight to the storage file so a large comment count never has to sit in memory.
+        switch (rFetchType) {
+            case STORE -> {
+                var tempFile = runContext.workingDir().createTempFile(".json").toFile();
+                long size;
+                try (var generator = JacksonMapper.ofJson().getFactory().createGenerator(tempFile, JsonEncoding.UTF8)) {
+                    generator.writeStartArray();
+                    size = fetchPages(runContext, issueRoute, rMaxResults, page ->
+                    {
+                        for (var comment : page) {
+                            generator.writeObject(comment);
+                        }
+                    });
+                    generator.writeEndArray();
+                }
+                outputBuilder.size(size).uri(runContext.storage().putFile(tempFile));
+            }
+            default -> {
+                var comments = new ArrayList<Map<String, Object>>();
+                long size = fetchPages(runContext, issueRoute, rMaxResults, comments::addAll);
+                outputBuilder.size(size).rows(comments);
+            }
+        }
+
+        return outputBuilder.build();
+    }
+
+    /** Renders an optional `Property<String>` input, treating an unset property as absent. */
+    private Optional<String> optionalRendered(RunContext runContext, Property<String> value) throws IllegalVariableEvaluationException {
+        return value == null ? Optional.empty() : runContext.render(value).as(String.class);
+    }
+
+    /** Handles one page of fetched comments, either collecting it or streaming it to storage. */
+    private interface PageHandler {
+        void handle(List<Map<String, Object>> page) throws Exception;
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record CommentsResponse(Integer startAt, Integer maxResults, Integer total, List<Map<String, Object>> comments) {
+    }
+
+    @Builder
+    @Getter
+    public static class Output implements io.kestra.core.models.tasks.Output {
+        @Schema(title = "The fetched comment", description = "Only populated when `fetchType` is `FETCH_ONE`.")
+        private final Map<String, Object> row;
+
+        @Schema(title = "The list of fetched comments", description = "Only populated when `fetchType` is `FETCH`.")
+        private final List<Map<String, Object>> rows;
+
+        @Schema(
+            title = "Kestra's internal storage URI of the stored comments",
+            description = "Only populated when `fetchType` is `STORE`."
+        )
+        private final URI uri;
+
+        @Schema(title = "The number of fetched comments")
+        private final Long size;
+    }
+}
