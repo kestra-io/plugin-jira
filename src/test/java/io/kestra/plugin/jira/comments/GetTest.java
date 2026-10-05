@@ -12,7 +12,7 @@ import io.kestra.core.runners.RunContextFactory;
 import io.kestra.core.utils.IdUtils;
 import io.kestra.core.utils.TestsUtils;
 import io.kestra.plugin.jira.issues.AbstractJiraTest;
-import io.kestra.plugin.jira.issues.JiraMockController;
+import io.kestra.plugin.jira.issues.JiraUtil;
 
 import jakarta.inject.Inject;
 
@@ -20,6 +20,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -37,24 +38,49 @@ class GetTest extends AbstractJiraTest {
             .baseUrl(getApiBaseUrl())
             .username(Property.ofValue("user@example.com"))
             .password(Property.ofValue("token"))
-            .issueIdOrKey("TEST-1")
+            .issueIdOrKey(Property.ofValue("TEST-1"))
             .build();
 
         RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
         Get.Output output = task.run(runContext);
 
-        assertThat(output.getSize(), is(2L));
+        // The mock spreads three comments over two startAt-paginated pages; both must be fetched.
+        assertThat(output.getSize(), is(3L));
         assertThat(output.getUri(), nullValue());
-        assertThat(output.getRows(), hasSize(2));
-        assertThat(output.getRows().get(0).get("id"), is("20000"));
-        assertThat(output.getRows().get(0).get("body"), is("First comment"));
+        assertThat(output.getRows(), hasSize(3));
+        assertThat(output.getRows().getFirst().get("id"), is("20000"));
+        assertThat(output.getRows().getFirst().get("body"), is("First comment"));
         assertThat(output.getRows().get(1).get("id"), is("20001"));
+        assertThat(output.getRows().get(2).get("id"), is("20002"));
+        assertThat(output.getRows().get(2).get("body"), is("Third comment"));
 
-        assertThat(mockController.requests, hasSize(1));
-        JiraMockController.CapturedRequest request = mockController.requests.getFirst();
-        assertThat(request.method(), is("GET"));
-        assertThat(request.path(), is("/rest/api/2/issue/TEST-1/comment"));
-        assertThat(request.authorization(), startsWith("Basic "));
+        assertThat(mockController.requests, hasSize(2));
+        var firstRequest = mockController.requests.getFirst();
+        assertThat(firstRequest.method(), is("GET"));
+        assertThat(firstRequest.path(), is("/rest/api/2/issue/TEST-1/comment"));
+        assertThat(firstRequest.query(), is("maxResults=50&startAt=0"));
+        assertThat(firstRequest.authorization(), startsWith("Basic "));
+        assertThat(mockController.requests.get(1).query(), is("maxResults=50&startAt=2"));
+    }
+
+    @Test
+    void storesAllCommentsOfAnIssueInKestraStorage() throws Exception {
+        Get task = Get.builder()
+            .id(IdUtils.create())
+            .type(Get.class.getName())
+            .baseUrl(getApiBaseUrl())
+            .username(Property.ofValue("user@example.com"))
+            .password(Property.ofValue("token"))
+            .issueIdOrKey(Property.ofValue("TEST-1"))
+            .fetchType(Property.ofValue(FetchType.STORE))
+            .build();
+
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        Get.Output output = task.run(runContext);
+
+        assertThat(output.getSize(), is(3L));
+        assertThat(output.getUri(), notNullValue());
+        assertThat(output.getRows(), nullValue());
     }
 
     @Test
@@ -65,8 +91,8 @@ class GetTest extends AbstractJiraTest {
             .baseUrl(getApiBaseUrl())
             .username(Property.ofValue("user@example.com"))
             .password(Property.ofValue("token"))
-            .issueIdOrKey("TEST-1")
-            .commentId("20000")
+            .issueIdOrKey(Property.ofValue("TEST-1"))
+            .commentId(Property.ofValue("20000"))
             .fetchType(Property.ofValue(FetchType.FETCH_ONE))
             .build();
 
@@ -86,7 +112,7 @@ class GetTest extends AbstractJiraTest {
             .type(Get.class.getName())
             .baseUrl(getApiBaseUrl())
             .accessToken(Property.ofValue("oauth-token"))
-            .issueIdOrKey("TEST-1")
+            .issueIdOrKey(Property.ofValue("TEST-1"))
             .build();
 
         RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
@@ -103,7 +129,7 @@ class GetTest extends AbstractJiraTest {
             .baseUrl(getApiBaseUrl() + "/jira/")
             .username(Property.ofValue("user@example.com"))
             .password(Property.ofValue("token"))
-            .issueIdOrKey("TEST-1")
+            .issueIdOrKey(Property.ofValue("TEST-1"))
             .build();
 
         RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
@@ -120,7 +146,7 @@ class GetTest extends AbstractJiraTest {
             .baseUrl(getApiBaseUrl())
             .username(Property.ofValue("user@example.com"))
             .password(Property.ofValue("token"))
-            .issueIdOrKey("OPS 123")
+            .issueIdOrKey(Property.ofValue("OPS 123"))
             .build();
 
         RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
@@ -137,36 +163,69 @@ class GetTest extends AbstractJiraTest {
             .baseUrl(getApiBaseUrl() + "/missing-key")
             .username(Property.ofValue("user@example.com"))
             .password(Property.ofValue("token"))
-            .issueIdOrKey("TEST-1")
-            .commentId("20000")
+            .issueIdOrKey(Property.ofValue("TEST-1"))
+            .commentId(Property.ofValue("20000"))
             .fetchType(Property.ofValue(FetchType.FETCH_ONE))
             .build();
 
         RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
 
-        IllegalStateException exception = assertThrows(IllegalStateException.class, () -> task.run(runContext));
+        var exception = assertThrows(IllegalStateException.class, () -> task.run(runContext));
         assertThat(exception.getMessage(), containsString("Jira returned HTTP 200 without a comment id"));
     }
 
     @Test
-    void returnsNoCommentsOnEmptyOrNonJsonBody() throws Exception {
-        for (String marker : new String[] { "/empty-body", "/bad-json" }) {
-            Get task = Get.builder()
-                .id(IdUtils.create())
-                .type(Get.class.getName())
-                .baseUrl(getApiBaseUrl() + marker)
-                .username(Property.ofValue("user@example.com"))
-                .password(Property.ofValue("token"))
-                .issueIdOrKey("TEST-1")
-                .build();
+    void failsWithClearMessageWhenCommentsResponseLacksComments() {
+        Get task = Get.builder()
+            .id(IdUtils.create())
+            .type(Get.class.getName())
+            .baseUrl(getApiBaseUrl() + "/missing-key")
+            .username(Property.ofValue("user@example.com"))
+            .password(Property.ofValue("token"))
+            .issueIdOrKey(Property.ofValue("TEST-1"))
+            .build();
 
-            RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
 
-            // An empty or non-JSON comments payload parses into no comments rather than failing the flow.
-            Get.Output output = task.run(runContext);
-            assertThat(output.getSize(), is(0L));
-            assertThat(output.getRows(), hasSize(0));
-        }
+        var exception = assertThrows(IllegalStateException.class, () -> task.run(runContext));
+        assertThat(exception.getMessage(), containsString("Jira returned HTTP 200 without a list of comments"));
+    }
+
+    @Test
+    void returnsNoCommentsOnEmptyBody() throws Exception {
+        Get task = Get.builder()
+            .id(IdUtils.create())
+            .type(Get.class.getName())
+            .baseUrl(getApiBaseUrl() + "/empty-body")
+            .username(Property.ofValue("user@example.com"))
+            .password(Property.ofValue("token"))
+            .issueIdOrKey(Property.ofValue("TEST-1"))
+            .build();
+
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+
+        // A truly empty comments payload parses into no comments rather than failing the flow.
+        Get.Output output = task.run(runContext);
+        assertThat(output.getSize(), is(0L));
+        assertThat(output.getRows(), hasSize(0));
+    }
+
+    @Test
+    void failsWhenCommentsResponseBodyIsUnparsable() {
+        Get task = Get.builder()
+            .id(IdUtils.create())
+            .type(Get.class.getName())
+            .baseUrl(getApiBaseUrl() + "/bad-json")
+            .username(Property.ofValue("user@example.com"))
+            .password(Property.ofValue("token"))
+            .issueIdOrKey(Property.ofValue("TEST-1"))
+            .build();
+
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+
+        // A non-empty body the task cannot parse must fail the flow, not look like zero comments.
+        var exception = assertThrows(IllegalStateException.class, () -> task.run(runContext));
+        assertThat(exception.getMessage(), containsString("Jira returned HTTP 200 with an unparsable response body"));
     }
 
     @Test
@@ -177,13 +236,33 @@ class GetTest extends AbstractJiraTest {
             .baseUrl(getApiBaseUrl() + "/http-error")
             .username(Property.ofValue("user@example.com"))
             .password(Property.ofValue("token"))
-            .issueIdOrKey("TEST-1")
+            .issueIdOrKey(Property.ofValue("TEST-1"))
             .build();
 
         RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
 
-        HttpClientResponseException exception = assertThrows(HttpClientResponseException.class, () -> task.run(runContext));
+        var exception = assertThrows(HttpClientResponseException.class, () -> task.run(runContext));
         assertThat(exception.getMessage(), containsString("Jira request failed with HTTP 400"));
+    }
+
+    @Test
+    void rejectsMaxResultsOutsideTheDocumentedBounds() {
+        for (int invalidMaxResults : new int[] { 0, JiraUtil.MAX_RESULTS_LIMIT + 1 }) {
+            Get task = Get.builder()
+                .id(IdUtils.create())
+                .type(Get.class.getName())
+                .baseUrl(getApiBaseUrl())
+                .username(Property.ofValue("user@example.com"))
+                .password(Property.ofValue("token"))
+                .issueIdOrKey(Property.ofValue("TEST-1"))
+                .maxResults(Property.ofValue(invalidMaxResults))
+                .build();
+
+            RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+
+            var exception = assertThrows(IllegalArgumentException.class, () -> task.run(runContext));
+            assertThat(exception.getMessage(), containsString("`maxResults` must be"));
+        }
     }
 
     @Test
@@ -194,13 +273,13 @@ class GetTest extends AbstractJiraTest {
             .baseUrl(getApiBaseUrl())
             .username(Property.ofValue("user@example.com"))
             .password(Property.ofValue("token"))
-            .issueIdOrKey("TEST-1")
+            .issueIdOrKey(Property.ofValue("TEST-1"))
             .fetchType(Property.ofValue(FetchType.FETCH_ONE))
             .build();
 
         RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
 
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> task.run(runContext));
+        var exception = assertThrows(IllegalArgumentException.class, () -> task.run(runContext));
         assertThat(exception.getMessage(), containsString("`commentId` is required when `fetchType` is FETCH_ONE"));
     }
 }

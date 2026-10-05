@@ -121,19 +121,17 @@ public abstract class JiraClient extends Task {
             requestBuilder = requestBuilder.body(HttpRequest.StringRequestBody.builder().content(payload).build());
         }
 
-        var request = requestBuilder;
-
         if (renderedUsername.isPresent() && renderedPassword.isPresent()) {
             String authHeader = Base64.getEncoder().encodeToString(
                 (renderedUsername.get() + ":" + renderedPassword.get()).getBytes(StandardCharsets.UTF_8)
             );
-            return request.addHeader("Authorization", "Basic " + authHeader).build();
+            return requestBuilder.addHeader("Authorization", "Basic " + authHeader).build();
         }
 
         var accessTokenRendered = runContext.render(this.accessToken).as(String.class);
 
         if (accessTokenRendered.isPresent()) {
-            return request.addHeader("Authorization", "Bearer " + accessTokenRendered.get()).build();
+            return requestBuilder.addHeader("Authorization", "Bearer " + accessTokenRendered.get()).build();
         }
 
         throw new IllegalArgumentException("Missing required authentication fields");

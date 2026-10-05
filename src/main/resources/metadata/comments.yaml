@@ -1,0 +1,8 @@
+group: io.kestra.plugin.jira.comments
+name: "comments"
+title: "Jira Comments"
+description: "Tasks that fetch Jira issue comments."
+body: "Set Jira connection details and credentials, provide an issue key or id, and fetch a single comment by id or all comments of an issue, optionally storing them in Kestra storage for workflow automation."
+videos: []
+createdBy: "Kestra Core Team"
+managedBy: "Kestra Core Team"

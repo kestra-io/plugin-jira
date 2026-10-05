@@ -1,11 +1,14 @@
 package io.kestra.plugin.jira.comments;
 
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
@@ -18,7 +21,7 @@ import io.kestra.plugin.jira.issues.JiraClient;
 import io.kestra.plugin.jira.issues.JiraUtil;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -95,20 +98,20 @@ public class Get extends JiraClient implements RunnableTask<Get.Output> {
         title = "Issue key or id owning the comments",
         description = "Rendered value appended to `/rest/api/2/issue/` before the comment route."
     )
-    @PluginProperty(dynamic = true, group = "main")
-    @NotBlank
-    protected String issueIdOrKey;
+    @PluginProperty(group = "main")
+    @NotNull
+    private Property<String> issueIdOrKey;
 
     @Schema(
         title = "Comment id",
         description = "Required for `fetchType: FETCH_ONE`; rendered value appended after the issue's `/comment` route."
     )
-    @PluginProperty(dynamic = true, group = "main")
-    private String commentId;
+    @PluginProperty(group = "main")
+    private Property<String> commentId;
 
     @Schema(
-        title = "Maximum number of comments returned by the issue comments route",
-        description = "Only used for `fetchType: FETCH` or `STORE`."
+        title = "Page size for the issue comments route",
+        description = "Only used for `fetchType: FETCH` or `STORE`; every page is fetched until Jira reports no more results, so `size` reflects the full comment count. Must be between 1 and 5000."
     )
     @Builder.Default
     @PluginProperty(group = "advanced")
@@ -116,9 +119,11 @@ public class Get extends JiraClient implements RunnableTask<Get.Output> {
 
     @Override
     public Output run(RunContext runContext) throws Exception {
-        var rFetchType = runContext.render(this.fetchType).as(FetchType.class).orElseThrow();
+        var rFetchType = runContext.render(this.fetchType).as(FetchType.class).orElse(FetchType.FETCH);
         var rBrowseRoot = this.browseRoot(runContext);
-        var rIssueIdOrKey = runContext.render(this.issueIdOrKey);
+        var rIssueIdOrKey = optionalRendered(runContext, this.issueIdOrKey)
+            .filter(value -> !value.isBlank())
+            .orElseThrow(() -> new IllegalArgumentException("`issueIdOrKey` is required"));
         var encodedIssueIdOrKey = JiraUtil.encodePathSegment(rIssueIdOrKey);
         var issueRoute = rBrowseRoot + ISSUE_API_ROUTE + encodedIssueIdOrKey + COMMENT_API_ROUTE;
 
@@ -130,11 +135,9 @@ public class Get extends JiraClient implements RunnableTask<Get.Output> {
     }
 
     private Output fetchOne(RunContext runContext, String issueRoute) throws Exception {
-        if (this.commentId == null || this.commentId.isBlank()) {
-            throw new IllegalArgumentException("`commentId` is required when `fetchType` is FETCH_ONE");
-        }
-
-        var rCommentId = runContext.render(this.commentId);
+        var rCommentId = optionalRendered(runContext, this.commentId)
+            .filter(value -> !value.isBlank())
+            .orElseThrow(() -> new IllegalArgumentException("`commentId` is required when `fetchType` is FETCH_ONE"));
         var uri = issueRoute + "/" + JiraUtil.encodePathSegment(rCommentId);
         var response = this.execute(runContext, "GET", uri, null);
 
@@ -147,18 +150,35 @@ public class Get extends JiraClient implements RunnableTask<Get.Output> {
             .build();
     }
 
+    /**
+     * Pages through the issue comments route with `startAt` until Jira reports `total` is reached,
+     * so the output never silently truncates the comment count.
+     */
     private Output fetchMany(RunContext runContext, String issueRoute, FetchType rFetchType) throws Exception {
-        var rMaxResults = runContext.render(this.maxResults).as(Integer.class).orElse(50);
-        var uri = issueRoute + "?maxResults=" + rMaxResults;
-        var response = this.execute(runContext, "GET", uri, null);
+        var rMaxResults = JiraUtil.validateMaxResults(runContext.render(this.maxResults).as(Integer.class).orElse(50));
 
-        var commentsResponse = JiraUtil.parseJsonResponse(
-            runContext,
-            response,
-            CommentsResponse.class,
-            new CommentsResponse(null, null, null, List.of())
-        );
-        var comments = commentsResponse.comments() == null ? List.<Map<String, Object>> of() : commentsResponse.comments();
+        var comments = new ArrayList<Map<String, Object>>();
+        Integer total = null;
+        var startAt = 0;
+        int lastPageSize;
+
+        do {
+            var uri = issueRoute + "?maxResults=" + rMaxResults + "&startAt=" + startAt;
+            var response = this.execute(runContext, "GET", uri, null);
+
+            var commentsResponse = JiraUtil.parseJsonResponseStrict(
+                runContext,
+                response,
+                CommentsResponse.class,
+                new CommentsResponse(null, null, null, List.of())
+            );
+            JiraUtil.requireField(response, commentsResponse.comments(), "a list of comments");
+
+            comments.addAll(commentsResponse.comments());
+            lastPageSize = commentsResponse.comments().size();
+            startAt += lastPageSize;
+            total = commentsResponse.total();
+        } while (total != null && startAt < total && lastPageSize > 0);
 
         var outputBuilder = Output.builder().size((long) comments.size());
 
@@ -172,6 +192,11 @@ public class Get extends JiraClient implements RunnableTask<Get.Output> {
         }
 
         return outputBuilder.build();
+    }
+
+    /** Renders an optional `Property<String>` input, treating an unset property as absent. */
+    private Optional<String> optionalRendered(RunContext runContext, Property<String> value) throws IllegalVariableEvaluationException {
+        return value == null ? Optional.empty() : runContext.render(value).as(String.class);
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
