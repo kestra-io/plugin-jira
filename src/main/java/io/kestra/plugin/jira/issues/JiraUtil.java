@@ -32,8 +32,8 @@ public class JiraUtil {
 
     /**
      * Parses a Jira JSON response body into {@code type}, falling back to {@code emptyValue} (with a
-     * debug log, not a thrown exception) on an empty or non-JSON body — Jira's response shape isn't
-     * guaranteed stable across API versions.
+     * debug log, not a thrown exception) on an empty or non-JSON body, since Jira's response shape is
+     * not guaranteed stable across API versions.
      */
     public static <T> T parseJsonResponse(RunContext runContext, HttpResponse<String> response, Class<T> type, T emptyValue) {
         String body = response.getBody();
@@ -51,8 +51,8 @@ public class JiraUtil {
     }
 
     /**
-     * Parses a Jira JSON response body into {@code type}, failing with an actionable message —
-     * including the (truncated) response body — when a non-empty body cannot be parsed. Only a truly
+     * Parses a Jira JSON response body into {@code type}, failing with an actionable message
+     * (including the truncated response body) when a non-empty body cannot be parsed. Only a truly
      * empty body falls back to {@code emptyValue}: a flow should never look successful while Jira
      * actually returned data the task could not understand.
      */
@@ -88,7 +88,7 @@ public class JiraUtil {
     }
 
     /**
-     * Fails with an actionable message — including the (truncated) Jira response body — when a
+     * Fails with an actionable message (including the truncated Jira response body) when a
      * required field is missing from an otherwise successful response.
      */
     public static void requireField(HttpResponse<String> response, Object fieldValue, String fieldDescription) {

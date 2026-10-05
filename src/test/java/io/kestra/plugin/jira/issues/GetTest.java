@@ -99,6 +99,26 @@ class GetTest extends AbstractJiraTest {
     }
 
     @Test
+    void omitsFieldsFromCloudSearchBodyWhenEmpty() throws Exception {
+        Get task = Get.builder()
+            .id(IdUtils.create())
+            .type(Get.class.getName())
+            .baseUrl(getApiBaseUrl())
+            .username(Property.ofValue("user@example.com"))
+            .password(Property.ofValue("token"))
+            .fetchType(Property.ofValue(FetchType.FETCH))
+            .jql(Property.ofValue("project = TEST"))
+            .fields(Property.ofValue(List.of()))
+            .build();
+
+        RunContext runContext = TestsUtils.mockRunContext(runContextFactory, task, Map.of());
+        Get.Output output = task.run(runContext);
+
+        assertThat(output.getSize(), is(3L));
+        assertThat(mockController.requests.getFirst().body(), not(containsString("fields")));
+    }
+
+    @Test
     void fetchesIssuesMatchingAJqlQueryWithTheServerSearchApi() throws Exception {
         Get task = Get.builder()
             .id(IdUtils.create())

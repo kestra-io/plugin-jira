@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.core.JsonEncoding;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
@@ -150,16 +151,11 @@ public class Get extends JiraClient implements RunnableTask<Get.Output> {
             .build();
     }
 
-    /**
-     * Pages through the issue comments route with `startAt` until Jira reports `total` is reached,
-     * so the output never silently truncates the comment count.
-     */
-    private Output fetchMany(RunContext runContext, String issueRoute, FetchType rFetchType) throws Exception {
-        var rMaxResults = JiraUtil.validateMaxResults(runContext.render(this.maxResults).as(Integer.class).orElse(50));
-
-        var comments = new ArrayList<Map<String, Object>>();
+    /** Pages through the issue comments route, handing each page to {@code pageHandler}. */
+    private long fetchPages(RunContext runContext, String issueRoute, int rMaxResults, PageHandler pageHandler) throws Exception {
         Integer total = null;
         var startAt = 0;
+        long fetched = 0;
         int lastPageSize;
 
         do {
@@ -174,21 +170,47 @@ public class Get extends JiraClient implements RunnableTask<Get.Output> {
             );
             JiraUtil.requireField(response, commentsResponse.comments(), "a list of comments");
 
-            comments.addAll(commentsResponse.comments());
-            lastPageSize = commentsResponse.comments().size();
+            var page = commentsResponse.comments();
+            if (page.isEmpty()) {
+                break;
+            }
+            pageHandler.handle(page);
+            lastPageSize = page.size();
+            fetched += lastPageSize;
             startAt += lastPageSize;
             total = commentsResponse.total();
         } while (total != null && startAt < total && lastPageSize > 0);
 
-        var outputBuilder = Output.builder().size((long) comments.size());
+        return fetched;
+    }
 
+    private Output fetchMany(RunContext runContext, String issueRoute, FetchType rFetchType) throws Exception {
+        var rMaxResults = JiraUtil.validateMaxResults(runContext.render(this.maxResults).as(Integer.class).orElse(50));
+
+        var outputBuilder = Output.builder();
+
+        // STORE streams each page straight to the storage file so a large comment count never has to sit in memory.
         switch (rFetchType) {
             case STORE -> {
                 var tempFile = runContext.workingDir().createTempFile(".json").toFile();
-                JacksonMapper.ofJson().writeValue(tempFile, comments);
-                outputBuilder.uri(runContext.storage().putFile(tempFile));
+                long size;
+                try (var generator = JacksonMapper.ofJson().getFactory().createGenerator(tempFile, JsonEncoding.UTF8)) {
+                    generator.writeStartArray();
+                    size = fetchPages(runContext, issueRoute, rMaxResults, page ->
+                    {
+                        for (var comment : page) {
+                            generator.writeObject(comment);
+                        }
+                    });
+                    generator.writeEndArray();
+                }
+                outputBuilder.size(size).uri(runContext.storage().putFile(tempFile));
             }
-            default -> outputBuilder.rows(comments);
+            default -> {
+                var comments = new ArrayList<Map<String, Object>>();
+                long size = fetchPages(runContext, issueRoute, rMaxResults, comments::addAll);
+                outputBuilder.size(size).rows(comments);
+            }
         }
 
         return outputBuilder.build();
@@ -197,6 +219,11 @@ public class Get extends JiraClient implements RunnableTask<Get.Output> {
     /** Renders an optional `Property<String>` input, treating an unset property as absent. */
     private Optional<String> optionalRendered(RunContext runContext, Property<String> value) throws IllegalVariableEvaluationException {
         return value == null ? Optional.empty() : runContext.render(value).as(String.class);
+    }
+
+    /** Handles one page of fetched comments, either collecting it or streaming it to storage. */
+    private interface PageHandler {
+        void handle(List<Map<String, Object>> page) throws Exception;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

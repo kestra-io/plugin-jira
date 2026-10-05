@@ -10,6 +10,7 @@ import java.util.Optional;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonEncoding;
 
 import io.kestra.core.exceptions.IllegalVariableEvaluationException;
 import io.kestra.core.models.annotations.Example;
@@ -184,36 +185,51 @@ public class Get extends JiraClient implements RunnableTask<Get.Output> {
         var rFields = runContext.render(this.fields).asList(String.class);
         var rMaxResults = JiraUtil.validateMaxResults(runContext.render(this.maxResults).as(Integer.class).orElse(50));
 
-        var issues = rSearchApi == SearchApi.CLOUD
-            ? searchWithEnhancedApi(runContext, rBrowseRoot, rJql, rMaxResults, rFields)
-            : searchWithServerApi(runContext, rBrowseRoot, rJql, rMaxResults, rFields);
+        var outputBuilder = Output.builder();
 
-        var outputBuilder = Output.builder().size((long) issues.size());
-
+        // STORE streams each page straight to the storage file so a large match count never has to sit in memory.
         switch (rFetchType) {
             case STORE -> {
                 var tempFile = runContext.workingDir().createTempFile(".json").toFile();
-                JacksonMapper.ofJson().writeValue(tempFile, issues);
-                outputBuilder.uri(runContext.storage().putFile(tempFile));
+                long size;
+                try (var generator = JacksonMapper.ofJson().getFactory().createGenerator(tempFile, JsonEncoding.UTF8)) {
+                    generator.writeStartArray();
+                    PageHandler writePage = page ->
+                    {
+                        for (var issue : page) {
+                            generator.writeObject(issue);
+                        }
+                    };
+                    size = rSearchApi == SearchApi.CLOUD
+                        ? searchWithEnhancedApi(runContext, rBrowseRoot, rJql, rMaxResults, rFields, writePage)
+                        : searchWithServerApi(runContext, rBrowseRoot, rJql, rMaxResults, rFields, writePage);
+                    generator.writeEndArray();
+                }
+                outputBuilder.size(size).uri(runContext.storage().putFile(tempFile));
             }
-            default -> outputBuilder.rows(issues);
+            default -> {
+                var issues = new ArrayList<Map<String, Object>>();
+                long size = rSearchApi == SearchApi.CLOUD
+                    ? searchWithEnhancedApi(runContext, rBrowseRoot, rJql, rMaxResults, rFields, issues::addAll)
+                    : searchWithServerApi(runContext, rBrowseRoot, rJql, rMaxResults, rFields, issues::addAll);
+                outputBuilder.size(size).rows(issues);
+            }
         }
 
         return outputBuilder.build();
     }
 
-    /**
-     * Searches Jira Cloud's enhanced search endpoint, paging with `nextPageToken` until Jira reports
-     * the last page, so the output never silently truncates the match count.
-     */
-    private List<Map<String, Object>> searchWithEnhancedApi(RunContext runContext, String rBrowseRoot, String rJql, int rMaxResults, List<String> rFields) throws Exception {
+    /** Pages through Jira Cloud's enhanced search endpoint, handing each page to {@code pageHandler}. */
+    private long searchWithEnhancedApi(RunContext runContext, String rBrowseRoot, String rJql, int rMaxResults, List<String> rFields, PageHandler pageHandler) throws Exception {
         var uri = rBrowseRoot + SEARCH_JQL_API_ROUTE;
-        var issues = new ArrayList<Map<String, Object>>();
+        // The endpoint omits the parameter when null, so an empty list does not go out as `"fields": []`.
+        var requestFields = rFields.isEmpty() ? null : rFields;
         String nextPageToken = null;
+        long total = 0;
 
         do {
             var requestBody = JacksonMapper.ofJson().writeValueAsString(
-                new EnhancedSearchRequest(rJql, rMaxResults, rFields, nextPageToken)
+                new EnhancedSearchRequest(rJql, rMaxResults, requestFields, nextPageToken)
             );
             var response = this.execute(runContext, "POST", uri, requestBody);
 
@@ -221,28 +237,33 @@ public class Get extends JiraClient implements RunnableTask<Get.Output> {
                 runContext,
                 response,
                 EnhancedSearchResponse.class,
-                new EnhancedSearchResponse(null, List.of())
+                new EnhancedSearchResponse(null, null, List.of())
             );
-            JiraUtil.requireField(response, search.results(), "a list of issues");
+            JiraUtil.requireField(response, search.issues(), "a list of issues");
 
-            issues.addAll(search.results());
+            var page = search.issues();
+            if (page.isEmpty()) {
+                break;
+            }
+            pageHandler.handle(page);
+            total += page.size();
+            if (Boolean.TRUE.equals(search.isLast())) {
+                break;
+            }
             nextPageToken = search.nextPageToken();
         } while (nextPageToken != null && !nextPageToken.isBlank());
 
-        return issues;
+        return total;
     }
 
-    /**
-     * Searches the classic search endpoint still served by Jira Server and Data Center, paging with
-     * `startAt` until `total` is reached, so the output never silently truncates the match count.
-     */
-    private List<Map<String, Object>> searchWithServerApi(RunContext runContext, String rBrowseRoot, String rJql, int rMaxResults, List<String> rFields) throws Exception {
+    /** Pages through the classic search endpoint, handing each page to {@code pageHandler}. */
+    private long searchWithServerApi(RunContext runContext, String rBrowseRoot, String rJql, int rMaxResults, List<String> rFields, PageHandler pageHandler) throws Exception {
         var fieldsParameter = rFields.isEmpty()
             ? ""
             : "&fields=" + URLEncoder.encode(String.join(",", rFields), StandardCharsets.UTF_8);
-        var issues = new ArrayList<Map<String, Object>>();
         Integer total = null;
         var startAt = 0;
+        long fetched = 0;
         int lastPageSize;
 
         do {
@@ -261,18 +282,28 @@ public class Get extends JiraClient implements RunnableTask<Get.Output> {
             );
             JiraUtil.requireField(response, search.issues(), "a list of issues");
 
-            issues.addAll(search.issues());
-            lastPageSize = search.issues().size();
+            var page = search.issues();
+            if (page.isEmpty()) {
+                break;
+            }
+            pageHandler.handle(page);
+            lastPageSize = page.size();
+            fetched += lastPageSize;
             startAt += lastPageSize;
             total = search.total();
         } while (total != null && startAt < total && lastPageSize > 0);
 
-        return issues;
+        return fetched;
     }
 
     /** Renders an optional `Property<String>` input, treating an unset property as absent. */
     private Optional<String> optionalRendered(RunContext runContext, Property<String> value) throws IllegalVariableEvaluationException {
         return value == null ? Optional.empty() : runContext.render(value).as(String.class);
+    }
+
+    /** Handles one page of fetched issues, either collecting it or streaming it to storage. */
+    private interface PageHandler {
+        void handle(List<Map<String, Object>> page) throws Exception;
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -281,7 +312,7 @@ public class Get extends JiraClient implements RunnableTask<Get.Output> {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    private record EnhancedSearchResponse(String nextPageToken, List<Map<String, Object>> results) {
+    private record EnhancedSearchResponse(String nextPageToken, Boolean isLast, List<Map<String, Object>> issues) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

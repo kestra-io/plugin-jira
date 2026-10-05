@@ -50,10 +50,10 @@ public class JiraMockController {
         {"startAt":2,"maxResults":1,"total":3,"issues":[{"id":"10002","key":"TEST-3","self":"http://mock-jira/rest/api/2/issue/10002"}]}""";
 
     private static final String SEARCH_JQL_PAGE_1_RESPONSE = """
-        {"results":[{"id":"10000","key":"TEST-1","fields":{"summary":"Fix the login bug"}},{"id":"10001","key":"TEST-2","fields":{"summary":"Add pagination"}}],"nextPageToken":"page-2"}""";
+        {"issues":[{"id":"10000","key":"TEST-1","fields":{"summary":"Fix the login bug"}},{"id":"10001","key":"TEST-2","fields":{"summary":"Add pagination"}}],"isLast":false,"nextPageToken":"page-2"}""";
 
     private static final String SEARCH_JQL_PAGE_2_RESPONSE = """
-        {"results":[{"id":"10002","key":"TEST-3","fields":{"summary":"Polish docs"}}]}""";
+        {"issues":[{"id":"10002","key":"TEST-3","fields":{"summary":"Polish docs"}}],"isLast":true}""";
 
     // Two pages of three comments total, so startAt pagination is exercised.
     private static final String GET_COMMENTS_PAGE_1_RESPONSE = """
