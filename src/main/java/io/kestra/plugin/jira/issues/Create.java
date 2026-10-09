@@ -11,6 +11,7 @@ import io.kestra.core.http.HttpResponse;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.annotations.TicketingField;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
 import io.kestra.core.models.tasks.TicketingTaskInterface;
@@ -96,6 +97,7 @@ public class Create extends JiraClient implements RunnableTask<Create.Output>, T
         description = "Rendered summary for the issue; templating supported."
     )
     @PluginProperty(group = "main")
+    @TicketingField(role = TicketingField.Role.CASE_TITLE)
     protected Property<String> summary;
 
     @Schema(
@@ -103,6 +105,7 @@ public class Create extends JiraClient implements RunnableTask<Create.Output>, T
         description = "Rendered description text for the issue; templating supported."
     )
     @PluginProperty(dynamic = true, group = "main")
+    @TicketingField(role = TicketingField.Role.CASE_DESCRIPTION)
     protected String description;
 
     @Schema(
@@ -179,9 +182,11 @@ public class Create extends JiraClient implements RunnableTask<Create.Output>, T
         private final String id;
 
         @Schema(title = "Created issue key", description = "Human-readable issue key such as `PROJ-123`; use it to reference the issue in downstream tasks.")
+        @TicketingField(role = TicketingField.Role.TICKET_KEY)
         private final String key;
 
         @Schema(title = "Issue browse URL", description = "Link to the issue in the Jira web UI, built as `{baseUrl}/browse/{key}`.")
+        @TicketingField(role = TicketingField.Role.TICKET_URL)
         private final String url;
 
         @Schema(title = "Issue REST link", description = "Jira's `self` REST API link for the created issue.")
