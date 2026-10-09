@@ -13,6 +13,7 @@ import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
+import io.kestra.core.models.tasks.TicketingTaskInterface;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
 
@@ -80,7 +81,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
         )
     }
 )
-public class Create extends JiraClient implements RunnableTask<Create.Output> {
+public class Create extends JiraClient implements RunnableTask<Create.Output>, TicketingTaskInterface {
 
     @Schema(
         title = "Project key",
