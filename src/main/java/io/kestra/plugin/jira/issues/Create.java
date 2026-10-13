@@ -11,8 +11,10 @@ import io.kestra.core.http.HttpResponse;
 import io.kestra.core.models.annotations.Example;
 import io.kestra.core.models.annotations.Plugin;
 import io.kestra.core.models.annotations.PluginProperty;
+import io.kestra.core.models.annotations.TicketingField;
 import io.kestra.core.models.property.Property;
 import io.kestra.core.models.tasks.RunnableTask;
+import io.kestra.core.models.tasks.TicketingTaskInterface;
 import io.kestra.core.runners.RunContext;
 import io.kestra.core.serializers.JacksonMapper;
 
@@ -31,7 +33,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
 @NoArgsConstructor
 @Schema(
     title = "Create a Jira issue",
-    description = "Builds a JSON payload from the rendered project, summary, description, labels, and issue type, then posts it to `/rest/api/2/issue/`. `summary` and `description` are optional and omitted from the payload when not set; a `kestra-bot` label is always included."
+    description = "Builds a JSON payload from the rendered project, summary, description, labels, issue type, and priority, then posts it to `/rest/api/2/issue/`. `summary` and `description` are optional and omitted from the payload when not set; a `kestra-bot` label is always included."
 )
 @Plugin(
     examples = {
@@ -80,7 +82,7 @@ import static io.kestra.plugin.jira.issues.JiraUtil.ISSUE_API_ROUTE;
         )
     }
 )
-public class Create extends JiraClient implements RunnableTask<Create.Output> {
+public class Create extends JiraClient implements RunnableTask<Create.Output>, TicketingTaskInterface {
 
     @Schema(
         title = "Project key",
@@ -95,6 +97,7 @@ public class Create extends JiraClient implements RunnableTask<Create.Output> {
         description = "Rendered summary for the issue; templating supported."
     )
     @PluginProperty(group = "main")
+    @TicketingField(role = TicketingField.Role.CASE_TITLE)
     protected Property<String> summary;
 
     @Schema(
@@ -102,6 +105,7 @@ public class Create extends JiraClient implements RunnableTask<Create.Output> {
         description = "Rendered description text for the issue; templating supported."
     )
     @PluginProperty(dynamic = true, group = "main")
+    @TicketingField(role = TicketingField.Role.CASE_DESCRIPTION)
     protected String description;
 
     @Schema(
@@ -117,6 +121,19 @@ public class Create extends JiraClient implements RunnableTask<Create.Output> {
     )
     @PluginProperty(group = "advanced")
     protected Property<String> issueTypeId;
+
+    @Schema(
+        title = "Priority",
+        description = "Optional Jira priority name such as `Highest`, `High`, `Medium`, `Low` or `Lowest`; it must exist in your Jira instance and be available on the create screen of the project."
+    )
+    @PluginProperty(group = "advanced")
+    @TicketingField(role = TicketingField.Role.CASE_SEVERITY, valueMap = {
+        @TicketingField.Mapping(from = "CRITICAL", to = "Highest"),
+        @TicketingField.Mapping(from = "HIGH", to = "High"),
+        @TicketingField.Mapping(from = "MEDIUM", to = "Medium"),
+        @TicketingField.Mapping(from = "LOW", to = "Low")
+    })
+    protected Property<String> priority;
 
     @Override
     public Output run(RunContext runContext) throws Exception {
@@ -159,6 +176,8 @@ public class Create extends JiraClient implements RunnableTask<Create.Output> {
 
         runContext.render(this.issueTypeId).as(String.class).ifPresent(id -> fields.put("issuetype", Map.of("id", id)));
 
+        runContext.render(this.priority).as(String.class).filter(name -> !name.isBlank()).ifPresent(name -> fields.put("priority", Map.of("name", name)));
+
         var labels = new ArrayList<>(List.of("kestra-bot"));
         labels.addAll(runContext.render(this.labels).asList(String.class));
         fields.put("labels", labels);
@@ -178,9 +197,11 @@ public class Create extends JiraClient implements RunnableTask<Create.Output> {
         private final String id;
 
         @Schema(title = "Created issue key", description = "Human-readable issue key such as `PROJ-123`; use it to reference the issue in downstream tasks.")
+        @TicketingField(role = TicketingField.Role.TICKET_KEY)
         private final String key;
 
         @Schema(title = "Issue browse URL", description = "Link to the issue in the Jira web UI, built as `{baseUrl}/browse/{key}`.")
+        @TicketingField(role = TicketingField.Role.TICKET_URL)
         private final String url;
 
         @Schema(title = "Issue REST link", description = "Jira's `self` REST API link for the created issue.")
