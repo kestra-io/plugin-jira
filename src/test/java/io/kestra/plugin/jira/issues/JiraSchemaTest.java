@@ -42,6 +42,16 @@ class JiraSchemaTest {
 
     @Test
     @SuppressWarnings("unchecked")
+    void createPriorityMapsTheCaseSeverityToJiraPriorityNames() {
+        var generate = jsonSchemaGenerator.properties(Task.class, Create.class);
+        var properties = (Map<String, Map<String, Object>>) generate.get("properties");
+
+        assertThat(metadata(properties.get("priority")).get("$ticketingRole"), is("CASE_SEVERITY"));
+        assertThat(metadata(properties.get("priority")).get("$ticketingValueMap"), is(Map.of("CRITICAL", "Highest", "HIGH", "High", "MEDIUM", "Medium", "LOW", "Low")));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
     void createCommentAndUpdateFieldsExposeIssueFieldsAsDeprecatedAndOptional() {
         for (Class<? extends Task> taskClass : List.of(CreateComment.class, UpdateFields.class)) {
             var generate = jsonSchemaGenerator.properties(Task.class, taskClass);
@@ -74,7 +84,7 @@ class JiraSchemaTest {
 
     @SuppressWarnings("unchecked")
     private static Map<String, Object> metadata(Map<String, Object> propertySchema) {
-        if (propertySchema.containsKey("$group") || propertySchema.containsKey("$secret") || propertySchema.containsKey("$deprecated")) {
+        if (propertySchema.containsKey("$group") || propertySchema.containsKey("$ticketingRole") || propertySchema.containsKey("$secret") || propertySchema.containsKey("$deprecated")) {
             return propertySchema;
         }
         var anyOf = (List<Map<String, Object>>) propertySchema.get("anyOf");
