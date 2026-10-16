@@ -121,7 +121,28 @@ class CreateTest extends AbstractJiraTest {
 
         Map<String, Object> fields = fieldsOf(mockController.requests.getFirst().body());
         assertThat(fields.keySet(), not(hasItem("description")));
+        assertThat(fields.keySet(), not(hasItem("priority")));
         assertThat((List<String>) fields.get("labels"), hasItem("kestra-bot"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void sendsPriorityByNameWhenSet() throws Exception {
+        Create task = Create.builder()
+            .id(IdUtils.create())
+            .type(Create.class.getName())
+            .baseUrl(getApiBaseUrl())
+            .username(Property.ofValue("user@example.com"))
+            .password(Property.ofValue("token"))
+            .projectKey("PROJ")
+            .summary(Property.ofValue("Test summary"))
+            .priority(Property.ofValue("Highest"))
+            .build();
+
+        task.run(TestsUtils.mockRunContext(runContextFactory, task, Map.of()));
+
+        Map<String, Object> fields = fieldsOf(mockController.requests.getFirst().body());
+        assertThat((Map<String, Object>) fields.get("priority"), is(Map.of("name", "Highest")));
     }
 
     @Test
